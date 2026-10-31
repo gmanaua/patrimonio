@@ -33,13 +33,44 @@ tr.blk td{color:var(--amber);border-top:1px solid var(--line);font-weight:600}
 tbody tr:hover td{background:#161616}
 .scroll{overflow-x:auto}
 #mov td{white-space:nowrap}#mov td:nth-child(3){max-width:160px;overflow:hidden;text-overflow:ellipsis}
-.bar{display:grid;grid-template-columns:130px 1fr 70px;gap:8px;align-items:center;margin:3px 0}
-.bar i{display:block;height:10px;background:var(--amber)}
 .chart{position:relative;height:240px}
 #empty{padding:40px 16px;text-align:center;color:var(--dim)}
 button,input{font:inherit;background:#000;color:var(--amber);border:1px solid var(--amber);padding:4px 10px}
 header button{border-color:#000}
 button:focus-visible,input:focus-visible{outline:2px solid #fff}
+header{position:sticky;top:0;z-index:5}
+nav{display:flex;gap:2px;overflow-x:auto;max-width:100%}
+nav a{color:#000;text-decoration:none;padding:0 6px;font-size:12px;white-space:nowrap}
+nav a:hover,nav a:focus-visible{background:#000;color:var(--amber);outline:none}
+section{scroll-margin-top:40px}
+section h2 i{font-style:normal;color:var(--dim);text-transform:none;letter-spacing:0;margin-left:8px}
+.l{color:var(--dim);font-size:11px;margin:4px 0}
+.hero{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:center}
+.big{font-size:40px;color:var(--amber);line-height:1.1}
+.spark{height:110px;position:relative}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chip{border:1px solid var(--line);padding:2px 8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media (max-width:900px){.hero,.grid2,.grid3{grid-template-columns:1fr}}
+figure{margin:0}figcaption{color:var(--amber);font-size:12px;margin-bottom:6px}
+.donut{position:relative;height:190px}
+.donut span{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;color:var(--amber);font-size:15px}
+.legend{list-style:none;padding:0;margin:8px 0 0}
+.legend li{display:grid;grid-template-columns:12px 1fr auto auto;gap:8px;align-items:center;padding:1px 0}
+.legend i{width:10px;height:10px;display:block}
+.legend .dim{text-align:right}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.card{border:1px solid var(--line);padding:6px 8px;min-width:0}
+.card .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .v{font-size:18px}
+.seg{display:flex;flex-wrap:wrap;gap:4px;min-height:26px;margin:8px 0 4px}
+.seg button{padding:1px 8px;border-color:var(--line);color:var(--dim)}
+.seg button[aria-pressed=true]{border-color:var(--amber);color:var(--amber)}
+tr.blk button{background:none;border:0;color:inherit;padding:0;font-weight:600;cursor:pointer}
+.wbar{display:inline-block;width:60px;height:8px;background:#1a1a1a;vertical-align:middle;margin-right:6px}
+.wbar i{display:block;height:100%;background:var(--amber)}
+#risk td:last-child{white-space:normal;color:var(--dim);text-align:left}
 #lock{padding:60px 16px;text-align:center}
 #lock label{display:block;color:var(--amber);margin-bottom:8px}
 </style>
@@ -47,6 +78,7 @@ button:focus-visible,input:focus-visible{outline:2px solid #fff}
 <body>
 <header>
   <span>PATRIMONIO &lt;GO&gt;</span>
+  <nav aria-label="Secciones"><a href="#s-resumen">RESUMEN</a><a href="#s-rend">RENDIMIENTO</a><a href="#s-reparto">REPARTO</a><a href="#s-pos">POSICIONES</a><a href="#s-mov">MOVIMIENTOS</a><a href="#s-riesgo">RIESGO</a></nav>
   <span class="grow" id="status">CARGANDO…</span>
   <button id="logout" type="button">SALIR</button>
 </header>
@@ -60,14 +92,62 @@ button:focus-visible,input:focus-visible{outline:2px solid #fff}
 </div>
 <div id="empty"><p>Cargando…</p></div>
 <main id="app" hidden>
-  <section class="c12"><h2><b>1</b>Resumen</h2><div class="body kpis" id="kpis"></div></section>
-  <section class="c6"><h2><b>2</b>Patrimonio total · semanal</h2><div class="body chart"><canvas id="chPat"></canvas></div></section>
-  <section class="c6"><h2><b>3</b>Track record cartera · rent. acumulada</h2><div class="body chart"><canvas id="chTr"></canvas></div></section>
-  <section class="c8"><h2><b>4</b>Posiciones</h2><div class="body scroll"><table id="pos"></table></div></section>
-  <section class="c4"><h2><b>5</b>Asignación</h2><div class="body" id="alloc"></div></section>
-  <section class="c12"><h2><b>6</b>Rentabilidad mensual</h2><div class="body scroll"><table id="month"></table></div></section>
-  <section class="c6"><h2><b>7</b>Aportaciones netas acumuladas · PP</h2><div class="body chart"><canvas id="chFlow"></canvas></div></section>
-  <section class="c6"><h2><b>8</b>Últimos movimientos · PP</h2><div class="body scroll"><div id="flowSum" class="kpis"></div><table id="mov"></table></div></section>
+  <section class="c12" id="s-resumen"><h2><b>1</b>Resumen <i>¿Cuánto tengo?</i></h2>
+    <div class="body hero">
+      <div>
+        <div class="l">PATRIMONIO TOTAL</div>
+        <div class="big" id="total"></div>
+        <div class="chips" id="chips"></div>
+        <div class="kpis" id="kpis"></div>
+      </div>
+      <div class="spark"><canvas id="chSpark" aria-label="Patrimonio últimas 12 semanas"></canvas></div>
+    </div>
+  </section>
+  <section class="c12" id="s-rend"><h2><b>2</b>Rendimiento <i>¿Cómo voy?</i></h2>
+    <div class="body">
+      <div class="kpis" id="rendKpis"></div>
+      <div class="grid2">
+        <div><div class="seg" id="periods" role="group" aria-label="Periodo"></div><div class="chart"><canvas id="chTr"></canvas></div></div>
+        <div><div class="seg"></div><div class="chart"><canvas id="chMonth"></canvas></div></div>
+      </div>
+    </div>
+  </section>
+  <section class="c12" id="s-reparto"><h2><b>3</b>Reparto <i>¿Dónde está mi dinero?</i></h2>
+    <div class="body grid3">
+      <figure><figcaption>TIPO DE ACTIVO</figcaption><div class="donut"><canvas id="dTipo"></canvas><span id="cTipo"></span></div><ul class="legend" id="lTipo"></ul></figure>
+      <figure><figcaption>BLOQUE (INVERTIDO)</figcaption><div class="donut"><canvas id="dBloque"></canvas><span id="cBloque"></span></div><ul class="legend" id="lBloque"></ul></figure>
+      <figure><figcaption>BRÓKER</figcaption><div class="donut"><canvas id="dBroker"></canvas><span id="cBroker"></span></div><ul class="legend" id="lBroker"></ul></figure>
+    </div>
+  </section>
+  <section class="c12" id="s-pos"><h2><b>4</b>Posiciones <i>¿Qué tengo?</i></h2>
+    <div class="body">
+      <div class="grid2">
+        <div><div class="l">MEJORES</div><div class="cards" id="best"></div></div>
+        <div><div class="l">PEORES</div><div class="cards" id="worst"></div></div>
+      </div>
+      <div class="scroll"><table id="pos"></table></div>
+    </div>
+  </section>
+  <section class="c12" id="s-mov"><h2><b>5</b>Movimientos <i>¿Qué he hecho?</i></h2>
+    <div class="body">
+      <div class="kpis" id="flowSum"></div>
+      <div class="grid2">
+        <div class="chart"><canvas id="chFlow"></canvas></div>
+        <div class="chart"><canvas id="chInc"></canvas></div>
+      </div>
+      <div class="seg" id="movFilter" role="group" aria-label="Filtrar movimientos"></div>
+      <div class="scroll"><table id="mov"></table></div>
+    </div>
+  </section>
+  <section class="c12" id="s-riesgo"><h2><b>6</b>Riesgo <i>¿Cuánto me la juego?</i></h2>
+    <div class="body">
+      <div class="kpis" id="riskKpis"></div>
+      <div class="grid2">
+        <div class="chart"><canvas id="chDD"></canvas></div>
+        <div class="scroll"><table id="risk"></table></div>
+      </div>
+    </div>
+  </section>
 </main>
 <script>
 const $ = id => document.getElementById(id);
@@ -153,7 +233,9 @@ function parseExcel(wb, held) {
   const pat = rowsOf(wb, 'PATRIMONIO').filter(r => isNum(r[1]) && r[1] > 40000 && isNum(r[2])).map(r => ({d: xlDate(r[1]), v: r[2]}));
 
   const c = rowsOf(wb, 'CARTERA');
-  const weekly = c.filter(r => isNum(r[1]) && r[1] > 40000 && isNum(r[2])).map(r => ({d: xlDate(r[1]), v: r[2], ac: r[7]}));
+  // r = weekly return already net of contributions; chaining it gives the time-weighted return
+  let growth = 1;
+  const weekly = c.filter(r => isNum(r[1]) && r[1] > 40000 && isNum(r[2])).map(r => ({d: xlDate(r[1]), v: r[2], g: growth *= 1 + (isNum(r[6]) ? r[6] : 0)}));
   const iv = c.findIndex(r => r[9] === 'VALOR CARTERA');
   const months = [];
   if (iv > 0) {
@@ -161,69 +243,183 @@ function parseExcel(wb, held) {
     for (let k = 10; k < c[iv - 1].length; k++)
       if (isNum(c[iv - 1][k]) && isNum(c[iv][k])) months.push({d: xlDate(c[iv - 1][k]), v: c[iv][k], ret: ret?.[k], apo: apo?.[k]});
   }
-  return {total, cash, invested, mix, brokers, blocks, pat, weekly, months};
+  // DETALLE CARTERA: the "Métrica | Valor | Lectura" table you keep by hand
+  const det = wb.Sheets['DETALLE CARTERA'] ? rowsOf(wb, 'DETALLE CARTERA') : [];
+  const im = det.findIndex(r => r[4] === 'Métrica');
+  const metrics = im < 0 ? [] : det.slice(im + 1).filter(r => typeof r[4] === 'string' && isNum(r[6])).map(r => ({name: r[4], v: r[6], note: r[7] || ''}));
+  return {total, cash, invested, mix, brokers, blocks, pat, weekly, months, metrics};
 }
 
 // ---------- render ----------
 const charts = {};
-Chart.defaults.color = '#8a8a8a'; Chart.defaults.borderColor = '#1f1f1f';
+const C = {amber: '#ffa028', up: '#2fd16b', dn: '#ff4d4d', grid: '#1f1f1f', cats: ['#ffa028', '#3ea6ff', '#b58cff', '#8a8a8a', '#e8e8e8']};
+Chart.defaults.color = '#8a8a8a'; Chart.defaults.borderColor = C.grid;
 Chart.defaults.font.family = '"IBM Plex Mono", Consolas, monospace';
-function line(id, labels, data, color, fmt, opts = {}) {
+const mlabel = d => d.toLocaleDateString('es-ES', {month: 'short', year: '2-digit'});
+const monthKey = d => d.getFullYear() * 12 + d.getMonth();
+
+function chart(id, config) {
   charts[id]?.destroy();
-  charts[id] = new Chart($(id), {
+  charts[id] = new Chart($(id), config);
+}
+const title = text => ({display: true, text, color: C.amber, align: 'start', font: {weight: 600}});
+const base = (fmt, extra = {}) => ({
+  maintainAspectRatio: false, animation: false, interaction: {mode: 'index', intersect: false},
+  plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => (c.dataset.label ? c.dataset.label + ': ' : '') + fmt(c.parsed.y)}}, ...extra.plugins},
+  scales: {x: {ticks: {maxTicksLimit: 8}, grid: {display: false}}, y: {ticks: {callback: fmt}}, ...extra.scales},
+});
+
+// segmented buttons: [[label, value]], calls onPick(value) and keeps aria-pressed in sync
+function seg(id, options, current, onPick) {
+  $(id).innerHTML = options.map(([l, v]) => `<button type="button" data-v="${v}" aria-pressed="${v === current}">${l}</button>`).join('');
+  $(id).onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $(id).querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    onPick(b.dataset.v);
+  };
+}
+
+function donut(key, items, fmtCenter) {
+  const sum = items.reduce((s, [, v]) => s + v, 0);
+  chart('d' + key, {
+    type: 'doughnut',
+    data: {labels: items.map(i => i[0]), datasets: [{data: items.map(i => i[1]), backgroundColor: C.cats, borderColor: '#0a0a0a', borderWidth: 2}]},
+    options: {maintainAspectRatio: false, animation: false, cutout: '68%', plugins: {legend: {display: false},
+      tooltip: {callbacks: {label: c => `${c.label}: ${eur(c.parsed)} (${pct(c.parsed / sum)})`}}}},
+  });
+  $('c' + key).textContent = fmtCenter(sum);
+  $('l' + key).innerHTML = items.map(([n, v], i) => `<li><i style="background:${C.cats[i]}"></i><span>${n}</span><span>${pct(v / sum)}</span><span class="dim">${eur(v)}</span></li>`).join('');
+}
+
+let model = null, txs = null, period = 'all', movFilter = 'all';
+
+function drawReturns() {
+  const w = model.weekly, now = new Date();
+  const start = {all: null, ytd: new Date(now.getFullYear(), 0, 1), '3m': new Date(now - 91 * 864e5), '1m': new Date(now - 30 * 864e5)}[period];
+  let i0 = 0;
+  if (start) w.forEach((p, i) => { if (p.d <= start) i0 = i });
+  const s = w.slice(i0), r = s.map(p => p.g / s[0].g - 1), lastR = r.at(-1);
+  chart('chTr', {
     type: 'line',
-    data: {labels, datasets: [{data, borderColor: color, backgroundColor: color + '22', fill: true, pointRadius: 0, borderWidth: 1.5, tension: .15, ...opts}]},
-    options: {maintainAspectRatio: false, animation: false, interaction: {mode: 'index', intersect: false},
-      plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => fmt(c.parsed.y)}}},
-      scales: {x: {ticks: {maxTicksLimit: 8}}, y: {ticks: {callback: fmt}}}},
+    data: {labels: s.map(p => dstr(p.d)), datasets: [{data: r, borderColor: lastR >= 0 ? C.up : C.dn, backgroundColor: (lastR >= 0 ? C.up : C.dn) + '22', fill: true, pointRadius: 0, borderWidth: 1.5, tension: .15}]},
+    options: base(pct, {plugins: {title: title(`RENTABILIDAD ACUMULADA ${sign(lastR, pct).replace(/<[^>]+>/g, '')}`)}}),
   });
 }
 
-function render(x, tx) {
-  const last = x.pat.at(-1), prev = x.pat.at(-2);
-  const pnl = x.blocks.flatMap(b => b.pos).reduce((s, p) => s + (p.pnl || 0), 0);
-  const ac = x.weekly.at(-1)?.ac;
-  $('kpis').innerHTML = [
-    ['PATRIMONIO', eur(x.total)],
-    ['VAR. SEMANA', prev ? sign(last.v - prev.v, eur) + ' ' + sign(last.v / prev.v - 1, pct) : '—'],
-    ['INVERTIDO', eur(x.invested)],
-    ['CASH', eur(x.cash)],
-    ['P&L LATENTE', sign(pnl, eur)],
-    ['RENT. AC. CARTERA', sign(ac, pct)],
-  ].map(([l, v]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
-
-  line('chPat', x.pat.map(p => dstr(p.d)), x.pat.map(p => p.v), '#ffa028', eur);
-  const trUp = (ac ?? 0) >= 0 ? '#2fd16b' : '#ff4d4d';
-  line('chTr', x.weekly.map(p => dstr(p.d)), x.weekly.map(p => p.ac), trUp, pct);
-
-  $('pos').innerHTML = '<thead><tr><th>Activo</th><th>Peso</th><th>Invertido</th><th>Valor</th><th>P&L €</th><th>P&L %</th></tr></thead><tbody>' +
-    x.blocks.map(b => `<tr class="blk"><td>${b.name}</td><td>${pct(b.weight)}</td><td></td><td>${eur(b.value)}</td><td></td><td></td></tr>` +
-      b.pos.map(p => `<tr><td>${p.name}</td><td>${pct(p.weight)}</td><td>${eur(p.cost)}</td><td>${eur(p.value)}</td><td>${sign(p.pnl, eur)}</td><td>${sign(p.ret, pct)}</td></tr>`).join('')).join('') + '</tbody>';
-
-  const bars = (title, items) => {
-    const sum = items.reduce((s, [, v]) => s + v, 0);
-    return `<div class="dim" style="margin:6px 0 2px">${title}</div>` + items.map(([n, v]) =>
-      `<div class="bar"><span>${n}</span><i style="width:${(v / sum * 100).toFixed(1)}%"></i><span style="text-align:right">${pct(v / sum)}</span></div>`).join('');
-  };
-  $('alloc').innerHTML = bars('TIPO', x.mix) + bars('BLOQUE (INVERTIDO)', x.blocks.map(b => [b.name, b.value])) + bars('BRÓKER', x.brokers);
-
-  $('month').innerHTML = '<thead><tr><th></th>' + x.months.map(m => `<th>${m.d.toLocaleDateString('es-ES', {month: 'short', year: '2-digit'})}</th>`).join('') + '</tr></thead><tbody>' +
-    `<tr><td>Valor</td>${x.months.map(m => `<td>${eur(m.v)}</td>`).join('')}</tr>` +
-    `<tr><td>Aportación</td>${x.months.map(m => `<td class="dim">${isNum(m.apo) ? eur(m.apo) : ''}</td>`).join('')}</tr>` +
-    `<tr><td>Rent. %</td>${x.months.map(m => `<td>${isNum(m.ret) ? sign(m.ret, pct) : ''}</td>`).join('')}</tr></tbody>`;
-
-  if (!tx) return;
-  let acc = 0;
-  const flows = tx.filter(t => t.type === 'Depósito' || t.type === 'Retirada');
-  line('chFlow', flows.map(t => dstr(t.date)), flows.map(t => acc += t.type === 'Depósito' ? t.net : -t.net), '#3ea6ff', eur, {stepped: true, tension: 0});
-  const sum = type => tx.filter(t => t.type === type).reduce((s, t) => s + t.net, 0);
-  $('flowSum').innerHTML = [
-    ['APORTADO NETO', eur(acc)], ['INTERESES', eur(sum('Intereses'))], ['DIVIDENDOS', eur(sum('Dividendo'))],
-    ['COMISIONES', eur(tx.reduce((s, t) => s + t.fees, 0))], ['IMPUESTOS', eur(tx.reduce((s, t) => s + t.taxes, 0))],
-  ].map(([l, v]) => `<div class="kpi"><div class="l">${l}</div><div class="v" style="font-size:16px">${v}</div></div>`).join('');
+function drawMovements() {
+  const keep = {all: () => true, buy: t => t.type === 'Compra', sell: t => t.type === 'Venta',
+    flow: t => t.type === 'Depósito' || t.type === 'Retirada', inc: t => t.type === 'Intereses' || t.type === 'Dividendo'}[movFilter];
   const color = {Compra: 'dn', Venta: 'up', Depósito: 'up', Retirada: 'dn', Intereses: 'up', Dividendo: 'up'};
   $('mov').innerHTML = '<thead><tr><th>Fecha</th><th>Tipo</th><th>Activo</th><th>Cuenta</th><th>Importe</th></tr></thead><tbody>' +
-    tx.slice(-25).reverse().map(t => `<tr><td>${t.date.toLocaleDateString('es-ES', {day: '2-digit', month: '2-digit', year: '2-digit'})}</td><td class="${color[t.type] || ''}">${t.type}</td><td style="text-align:left">${t.asset || ''}</td><td class="dim">${t.account}</td><td>${eur(t.net)}</td></tr>`).join('') + '</tbody>';
+    txs.filter(keep).slice(-25).reverse().map(t => `<tr><td>${t.date.toLocaleDateString('es-ES', {day: '2-digit', month: '2-digit', year: '2-digit'})}</td><td class="${color[t.type] || ''}">${t.type}</td><td style="text-align:left">${t.asset || ''}</td><td class="dim">${t.account}</td><td>${eur(t.net)}</td></tr>`).join('') + '</tbody>';
+}
+
+function render(x, tx) {
+  model = x; txs = tx;
+  const now = new Date(), kpi = (l, v) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`;
+
+  // 1. Resumen
+  const pat = x.pat, last = pat.at(-1);
+  const before = d => [...pat].reverse().find(p => p.d < d) || pat[0];
+  const change = (label, ref) => `<span class="chip">${label} ${sign(last.v - ref.v, eur)} ${sign(last.v / ref.v - 1, pct)}</span>`;
+  const yearRef = before(new Date(now.getFullYear(), 0, 1));
+  $('total').textContent = eur(x.total);
+  $('chips').innerHTML = (pat.length > 1 ? change('SEMANA', pat.at(-2)) : '') +
+    change('MES', before(new Date(now.getFullYear(), now.getMonth(), 1))) +
+    change(yearRef === pat[0] ? `DESDE ${dstr(pat[0].d).toUpperCase()}` : 'AÑO', yearRef);
+  const all = x.blocks.flatMap(b => b.pos.map(p => ({...p, block: b.name})));
+  const twr = x.weekly.at(-1).g - 1;
+  $('kpis').innerHTML = kpi('INVERTIDO', eur(x.invested)) + kpi('CASH', eur(x.cash)) +
+    kpi('P&L LATENTE (POSICIONES)', sign(all.reduce((s, p) => s + (p.pnl || 0), 0), eur)) + kpi('RENTABILIDAD CARTERA', sign(twr, pct));
+  const sp = pat.slice(-12);
+  chart('chSpark', {type: 'line', data: {labels: sp.map(p => dstr(p.d)), datasets: [{data: sp.map(p => p.v), borderColor: C.amber, backgroundColor: C.amber + '22', fill: true, pointRadius: 0, borderWidth: 1.5, tension: .2}]},
+    options: {...base(eur), scales: {x: {display: false}, y: {display: false}}}});
+
+  // 2. Rendimiento
+  // months your sheet fills ahead (e.g. next month repeating this one) are dropped; the running month gets a *
+  const months = x.months.filter(m => isNum(m.ret) && m.d <= now);
+  const cur = m => monthKey(m.d) === monthKey(now);
+  const best = months.reduce((a, m) => m.ret > a.ret ? m : a, months[0]), worst = months.reduce((a, m) => m.ret < a.ret ? m : a, months[0]);
+  $('rendKpis').innerHTML = kpi('RENTABILIDAD TOTAL', sign(twr, pct)) +
+    kpi('MEJOR MES', `${sign(best.ret, pct)} <span class="dim">${mlabel(best.d)}</span>`) +
+    kpi('PEOR MES', `${sign(worst.ret, pct)} <span class="dim">${mlabel(worst.d)}</span>`) +
+    kpi('MESES EN POSITIVO', `${months.filter(m => m.ret > 0).length} de ${months.length}`);
+  seg('periods', [['TODO', 'all'], ['AÑO', 'ytd'], ['3M', '3m'], ['1M', '1m']], period, v => { period = v; drawReturns() });
+  drawReturns();
+  chart('chMonth', {
+    type: 'bar',
+    data: {labels: months.map(m => mlabel(m.d) + (cur(m) ? '*' : '')), datasets: [{data: months.map(m => m.ret), backgroundColor: months.map(m => m.ret >= 0 ? C.up : C.dn)}]},
+    options: base(pct, {plugins: {title: title('RENTABILIDAD POR MES  (* mes en curso)')}}),
+  });
+
+  // 3. Reparto
+  donut('Tipo', x.mix, eur);
+  donut('Bloque', x.blocks.map(b => [b.name, b.value]), eur);
+  donut('Broker', x.brokers, eur);
+
+  // 4. Posiciones
+  const byRet = [...all].sort((a, b) => b.ret - a.ret);
+  const card = p => `<div class="card"><div class="n" title="${p.name}">${p.name}</div><div class="v">${sign(p.ret, pct)}</div><div class="dim">${sign(p.pnl, eur)}</div></div>`;
+  $('best').innerHTML = byRet.slice(0, 3).map(card).join('');
+  $('worst').innerHTML = byRet.slice(-3).reverse().map(card).join('');
+  const maxW = Math.max(...all.map(p => p.weight));
+  $('pos').innerHTML = '<thead><tr><th>Activo</th><th>Peso</th><th>Invertido</th><th>Valor</th><th>P&L €</th><th>P&L %</th></tr></thead>' +
+    x.blocks.map(b => `<tbody><tr class="blk"><td><button type="button" aria-expanded="true">▾ ${b.name} (${b.pos.length})</button></td><td>${pct(b.weight)}</td><td></td><td>${eur(b.value)}</td><td></td><td></td></tr>` +
+      [...b.pos].sort((p, q) => q.weight - p.weight).map(p => `<tr><td>${p.name}</td><td><span class="wbar"><i style="width:${(p.weight / maxW * 100).toFixed(0)}%"></i></span>${pct(p.weight)}</td><td>${eur(p.cost)}</td><td>${eur(p.value)}</td><td>${sign(p.pnl, eur)}</td><td>${sign(p.ret, pct)}</td></tr>`).join('') + '</tbody>').join('');
+  $('pos').onclick = e => {
+    const btn = e.target.closest('tr.blk button'); if (!btn) return;
+    const open = btn.getAttribute('aria-expanded') !== 'true';
+    btn.setAttribute('aria-expanded', open);
+    btn.textContent = (open ? '▾' : '▸') + btn.textContent.slice(1);
+    btn.closest('tbody').querySelectorAll('tr:not(.blk)').forEach(r => r.hidden = !open);
+  };
+
+  // 6. Riesgo
+  let peak = 0, maxDD = {v: 0, d: null};
+  const dd = x.weekly.map(p => { peak = Math.max(peak, p.g); const v = p.g / peak - 1; if (v < maxDD.v) maxDD = {v, d: p.d}; return v });
+  const top = [...all].sort((a, b) => b.weight - a.weight)[0];
+  $('riskKpis').innerHTML = kpi('CAÍDA DESDE MÁXIMOS', sign(dd.at(-1), pct)) +
+    kpi('MÁXIMA CAÍDA', `${sign(maxDD.v, pct)}${maxDD.d ? ` <span class="dim">${dstr(maxDD.d)}</span>` : ''}`) +
+    kpi('MAYOR POSICIÓN', `${pct(top.weight)} <span class="dim">${top.name}</span>`) + kpi('LIQUIDEZ', pct(x.cash / x.total));
+  chart('chDD', {type: 'line', data: {labels: x.weekly.map(p => dstr(p.d)), datasets: [{data: dd, borderColor: C.dn, backgroundColor: C.dn + '33', fill: true, pointRadius: 0, borderWidth: 1.5, tension: .15}]},
+    options: base(pct, {plugins: {title: title('CAÍDA DESDE MÁXIMOS')}, scales: {y: {max: 0, ticks: {callback: pct}}}})});
+  $('risk').innerHTML = '<thead><tr><th>Métrica</th><th>Valor</th><th>Lectura</th></tr></thead><tbody>' +
+    x.metrics.map(m => `<tr><td>${m.name}</td><td>${pct(m.v)}</td><td>${m.note}</td></tr>`).join('') + '</tbody>';
+
+  // 5. Movimientos
+  $('s-mov').hidden = !tx;
+  if (!tx) return;
+  // net per month: a transfer between your own accounts (out of one, into another) cancels out instead of spiking
+  const flowM = new Map(), incM = new Map();
+  for (const t of tx) {
+    const k = monthKey(t.date);
+    if (t.type === 'Depósito' || t.type === 'Retirada') flowM.set(k, (flowM.get(k) || 0) + (t.type === 'Depósito' ? t.net : -t.net));
+    if (t.type === 'Intereses' || t.type === 'Dividendo') { const o = incM.get(k) || {i: 0, d: 0}; o[t.type === 'Intereses' ? 'i' : 'd'] += t.net; incM.set(k, o) }
+  }
+  const keys = [...new Set([...flowM.keys(), ...incM.keys()])].sort((a, b) => a - b);
+  const kl = k => mlabel(new Date(Math.floor(k / 12), k % 12, 1));
+  let acc = 0;
+  const net = keys.map(k => flowM.get(k) || 0), cum = net.map(v => acc += v);
+  chart('chFlow', {
+    data: {labels: keys.map(kl), datasets: [
+      {type: 'bar', label: 'Neto del mes', data: net, backgroundColor: net.map(v => v >= 0 ? C.up : C.dn), yAxisID: 'y'},
+      {type: 'line', label: 'Acumulado', data: cum, borderColor: C.amber, pointRadius: 0, borderWidth: 1.5, yAxisID: 'y1'}]},
+    options: base(eur, {plugins: {title: title('APORTACIONES NETAS POR MES'), legend: {display: true, labels: {boxWidth: 10}}},
+      scales: {y1: {position: 'right', grid: {display: false}, ticks: {callback: eur}}}}),
+  });
+  chart('chInc', {
+    type: 'bar',
+    data: {labels: keys.map(kl), datasets: [
+      {label: 'Intereses', data: keys.map(k => incM.get(k)?.i || 0), backgroundColor: C.cats[0]},
+      {label: 'Dividendos', data: keys.map(k => incM.get(k)?.d || 0), backgroundColor: C.cats[1]}]},
+    options: base(eur, {plugins: {title: title('INGRESOS PASIVOS POR MES'), legend: {display: true, labels: {boxWidth: 10}}},
+      scales: {x: {stacked: true, grid: {display: false}, ticks: {maxTicksLimit: 8}}, y: {stacked: true, ticks: {callback: eur}}}}),
+  });
+  const sum = type => tx.filter(t => t.type === type).reduce((s, t) => s + t.net, 0);
+  $('flowSum').innerHTML = kpi('APORTADO NETO', eur(acc)) + kpi('INTERESES', eur(sum('Intereses'))) + kpi('DIVIDENDOS', eur(sum('Dividendo'))) +
+    kpi('COMISIONES', eur(tx.reduce((s, t) => s + t.fees, 0))) + kpi('IMPUESTOS', eur(tx.reduce((s, t) => s + t.taxes, 0)));
+  seg('movFilter', [['TODOS', 'all'], ['COMPRAS', 'buy'], ['VENTAS', 'sell'], ['APORTACIONES', 'flow'], ['INGRESOS', 'inc']], movFilter, v => { movFilter = v; drawMovements() });
+  drawMovements();
 }
 
 // ---------- files + auto refresh ----------
