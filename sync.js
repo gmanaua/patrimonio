@@ -2,6 +2,7 @@
 // The password lives in clave.txt next to this file (git-ignored), never in the repo.
 const fs = require('fs'), path = require('path'), os = require('os'), {execFileSync} = require('child_process');
 const {webcrypto: {subtle}, randomBytes} = require('crypto');
+const historico = require('./historico');
 
 const EXCEL = process.env.PATRIMONIO_EXCEL || path.join(os.homedir(), 'OneDrive', 'Escriptori', '+-.xlsx');
 const CSV_DIR = process.env.PATRIMONIO_CSV_DIR || path.join(os.homedir(), 'Downloads');
@@ -9,6 +10,8 @@ const CSV_MATCH = /^Todas_las_transacciones.*\.csv$/i;
 const OUT = process.env.PATRIMONIO_OUT || path.join(__dirname, 'data');
 const PUSH = !process.env.PATRIMONIO_NO_PUSH;
 const EVERY_MS = 10000;
+const HIST_HASTA = '2026-03-06'; // first week of the CARTERA sheet: the rebuilt history ends here and the Excel takes over
+const HIST_OUT = process.env.PATRIMONIO_HIST_OUT || path.join(__dirname, 'historico.json');
 const log = (...a) => fs.appendFileSync(path.join(__dirname, 'sync.log'), `${new Date().toISOString()} ${a.join(' ')}\n`);
 
 function newestCsv() {
@@ -32,14 +35,28 @@ async function encrypt(buf, password) {
 
 const git = (...args) => execFileSync('git', args, {cwd: __dirname, encoding: 'utf8'}).trim();
 
+// Rebuilds historico.json (percentages only) from the PP CSV; on failure the previous file stays
+async function rebuildHistory(csv) {
+  try {
+    const {out, avisos} = await historico.build(fs.readFileSync(csv.full, 'utf8'), HIST_HASTA);
+    avisos.forEach((a) => log('aviso histórico:', a));
+    fs.writeFileSync(HIST_OUT, JSON.stringify(out) + '\n');
+    log('histórico', out.desde, '->', out.hasta, out.cartera.length, 'semanas');
+  } catch (e) {
+    log('error histórico', e.message);
+  }
+}
+
+let histFor = null;
 async function publish(password, csv) {
+  if (csv && histFor !== `${csv.full}|${csv.m}`) { await rebuildHistory(csv); histFor = `${csv.full}|${csv.m}`; }
   fs.mkdirSync(OUT, {recursive: true});
   fs.writeFileSync(path.join(OUT, 'excel.bin'), await encrypt(fs.readFileSync(EXCEL), password));
   if (csv) fs.writeFileSync(path.join(OUT, 'csv.bin'), await encrypt(fs.readFileSync(csv.full), password));
   fs.writeFileSync(path.join(OUT, 'stamp.json'), JSON.stringify({actualizado: new Date().toISOString(), csv: !!csv}));
   if (!PUSH) return;
-  git('add', 'data');
-  if (!git('status', '--porcelain', 'data')) return;
+  git('add', 'data', 'historico.json');
+  if (!git('status', '--porcelain', 'data', 'historico.json')) return;
   // Keep a single rolling data commit on top so the repo does not grow with every save
   const amend = git('log', '-1', '--format=%s') === 'Datos cifrados';
   git('commit', '-q', ...(amend ? ['--amend'] : []), '-m', 'Datos cifrados');
