@@ -15,8 +15,6 @@
 body{margin:0;background:var(--bg);color:var(--txt);font:13px/1.4 "IBM Plex Mono",Consolas,monospace}
 header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:var(--amber);color:#000;padding:4px 12px;font-weight:600}
 header .grow{flex:1}
-button{font:inherit;background:#000;color:var(--amber);border:1px solid #000;padding:2px 10px;cursor:pointer}
-button:focus-visible{outline:2px solid #fff}
 main{display:grid;gap:8px;padding:8px;grid-template-columns:repeat(12,1fr)}
 section{background:var(--panel);border:1px solid var(--line);min-width:0}
 section h2{margin:0;font-size:12px;color:var(--amber);border-bottom:1px solid var(--line);padding:3px 8px;text-transform:uppercase;letter-spacing:.05em}
@@ -39,21 +37,28 @@ tbody tr:hover td{background:#161616}
 .bar i{display:block;height:10px;background:var(--amber)}
 .chart{position:relative;height:240px}
 #empty{padding:40px 16px;text-align:center;color:var(--dim)}
-#empty button{border-color:var(--amber);font-size:15px;padding:6px 18px;margin:8px}
+button,input{font:inherit;background:#000;color:var(--amber);border:1px solid var(--amber);padding:4px 10px}
+header button{border-color:#000}
+button:focus-visible,input:focus-visible{outline:2px solid #fff}
+#lock{padding:60px 16px;text-align:center}
+#lock label{display:block;color:var(--amber);margin-bottom:8px}
 </style>
 </head>
 <body>
 <header>
   <span>PATRIMONIO &lt;GO&gt;</span>
-  <span class="grow" id="status">SIN DATOS</span>
-  <button id="btnPick">CONECTAR ARCHIVOS</button>
-  <button id="btnReconnect" hidden>RECONECTAR</button>
+  <span class="grow" id="status">CARGANDO…</span>
+  <button id="logout" type="button">SALIR</button>
 </header>
-<div id="empty">
-  <p>Conecta tu Excel (.xlsx) y el CSV de transacciones de Portfolio Performance.<br>
-  Los archivos se leen en tu navegador: no se suben a ningún sitio.</p>
-  <p>Se recarga solo cada vez que guardas el Excel o vuelves a exportar el CSV (Chrome / Edge).</p>
+<div id="lock" hidden>
+  <form id="lockForm">
+    <label for="pw">CONTRASEÑA</label>
+    <input id="pw" type="password" autocomplete="current-password" required>
+    <button type="submit">ENTRAR</button>
+    <p id="pwErr" class="dn" hidden>Contraseña incorrecta.</p>
+  </form>
 </div>
+<div id="empty"><p>Cargando…</p></div>
 <main id="app" hidden>
   <section class="c12"><h2><b>1</b>Resumen</h2><div class="body kpis" id="kpis"></div></section>
   <section class="c6"><h2><b>2</b>Patrimonio total · semanal</h2><div class="body chart"><canvas id="chPat"></canvas></div></section>
@@ -222,8 +227,7 @@ function render(x, tx) {
 }
 
 // ---------- files + auto refresh ----------
-async function readText(file) {
-  const buf = await file.arrayBuffer();
+function decodeText(buf) {
   const t = new TextDecoder('utf-8').decode(buf);
   return t.includes('�') ? new TextDecoder('windows-1252').decode(buf) : t;
 }
@@ -235,59 +239,55 @@ async function loadData(xlsxBuf, csvText) {
   $('empty').hidden = true; $('app').hidden = false;
 }
 
-let handles = [], stamps = '';
-async function refresh(force) {
+// data/*.bin = salt(16) | iv(12) | AES-256-GCM, key = PBKDF2-SHA256(password, salt, 250k) — written by sync.js
+async function decrypt(buf, password) {
+  const b = new Uint8Array(buf), salt = b.slice(0, 16), iv = b.slice(16, 28);
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({name: 'PBKDF2', salt, iterations: 250000, hash: 'SHA-256'}, base, {name: 'AES-GCM', length: 256}, false, ['decrypt']);
+  return crypto.subtle.decrypt({name: 'AES-GCM', iv}, key, b.slice(28));
+}
+
+async function get(url, as) {
+  const r = await fetch(url + '?t=' + Date.now(), {cache: 'no-store'});
+  if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+  return r[as]();
+}
+
+const PW_STORE = 'patrimonio-clave';
+const pw = {
+  get: () => { try { return localStorage.getItem(PW_STORE) } catch { return null } },
+  set: v => { try { v ? localStorage.setItem(PW_STORE, v) : localStorage.removeItem(PW_STORE) } catch {} },
+};
+
+let stamp = '', password = pw.get();
+async function refresh() {
+  if (!password) return;
   try {
-    const files = await Promise.all(handles.map(h => h.getFile()));
-    const s = files.map(f => f.name + f.lastModified).join('|');
-    if (!force && s === stamps) return;
-    const xl = files.find(f => /\.xls[xm]$/i.test(f.name)), csv = files.find(f => /\.csv$/i.test(f.name));
-    if (!xl) throw new Error('Falta el archivo .xlsx');
-    await loadData(await xl.arrayBuffer(), csv ? await readText(csv) : null);
-    stamps = s;
-    $('status').textContent = `${files.map(f => f.name).join(' + ')} · ACTUALIZADO ${new Date().toLocaleTimeString('es-ES')}`;
+    const st = await get('data/stamp.json', 'json');
+    if (st.actualizado === stamp) return;
+    let xl;
+    try { xl = await decrypt(await get('data/excel.bin', 'arrayBuffer'), password) }
+    catch (e) { if (e.name !== 'OperationError') throw e; password = null; pw.set(null); $('lock').hidden = false; $('pwErr').hidden = false; return }
+    const csv = st.csv ? decodeText(await decrypt(await get('data/csv.bin', 'arrayBuffer'), password)) : null;
+    await loadData(xl, csv);
+    stamp = st.actualizado;
+    $('lock').hidden = true;
+    $('status').textContent = `DATOS DE ${new Date(st.actualizado).toLocaleString('es-ES', {dateStyle: 'short', timeStyle: 'short'})}`;
   } catch (e) {
-    // Excel may be mid-save: keep the old view and retry on the next tick
+    // offline or Pages still deploying: keep the last view and retry on the next tick
     $('status').textContent = 'ERROR: ' + e.message;
   }
 }
 
-// store file handles so a reopened tab only needs one click to re-grant access
-const idb = (mode, fn) => new Promise((ok, ko) => {
-  const r = indexedDB.open('patrimonio', 1);
-  r.onupgradeneeded = () => r.result.createObjectStore('kv');
-  r.onsuccess = () => { const q = fn(r.result.transaction('kv', mode).objectStore('kv')); q.onsuccess = () => ok(q.result); q.onerror = () => ko(q.error) };
-  r.onerror = () => ko(r.error);
-});
-
-async function start(hs) {
-  handles = hs; stamps = '';
-  await refresh(true);
-  $('btnReconnect').hidden = true;
-}
-
-$('btnPick').onclick = async () => {
-  if (!window.showOpenFilePicker) {
-    // Firefox/Safari: one-shot load, no auto refresh
-    const inp = Object.assign(document.createElement('input'), {type: 'file', multiple: true, accept: '.xlsx,.xlsm,.csv'});
-    inp.onchange = () => start([...inp.files].map(f => ({getFile: async () => f})));
-    return inp.click();
-  }
-  const hs = await window.showOpenFilePicker({multiple: true, types: [{description: 'Excel o CSV', accept: {'application/octet-stream': ['.xlsx', '.xlsm', '.csv']}}]});
-  try { await idb('readwrite', s => s.put(hs, 'handles')) } catch {}
-  start(hs);
+$('lockForm').onsubmit = e => {
+  e.preventDefault();
+  password = $('pw').value; pw.set(password); $('pwErr').hidden = true; stamp = '';
+  refresh();
 };
-
-$('btnReconnect').onclick = async () => {
-  const hs = await idb('readonly', s => s.get('handles'));
-  for (const h of hs) if (await h.requestPermission({mode: 'read'}) !== 'granted') return;
-  start(hs);
-};
-
-(async () => {
-  try { if ((await idb('readonly', s => s.get('handles')))?.length) $('btnReconnect').hidden = false } catch {}
-})();
-setInterval(() => handles.length && refresh(false), 3000);
+$('logout').onclick = () => { pw.set(null); location.reload() };
+if (!password) $('lock').hidden = false;
+refresh();
+setInterval(refresh, 60000);
 </script>
 </body>
 </html>

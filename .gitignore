@@ -2,3 +2,5 @@
 *.xls
 *.xlsm
 *.csv
+clave.txt
+sync.log
