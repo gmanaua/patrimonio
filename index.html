@@ -39,7 +39,7 @@ button,input{font:inherit;background:#000;color:var(--amber);border:1px solid va
 header button{border-color:#000}
 button:focus-visible,input:focus-visible{outline:2px solid #fff}
 header{position:sticky;top:0;z-index:5}
-nav{display:flex;gap:2px;overflow-x:auto;max-width:100%}
+nav{display:flex;gap:2px;overflow-x:auto;max-width:100%;scrollbar-width:none}
 nav a{color:#000;text-decoration:none;padding:0 6px;font-size:12px;white-space:nowrap}
 nav a:hover,nav a:focus-visible{background:#000;color:var(--amber);outline:none}
 section{scroll-margin-top:40px}
@@ -233,21 +233,13 @@ function parseExcel(wb, held) {
   const pat = rowsOf(wb, 'PATRIMONIO').filter(r => isNum(r[1]) && r[1] > 40000 && isNum(r[2])).map(r => ({d: xlDate(r[1]), v: r[2]}));
 
   const c = rowsOf(wb, 'CARTERA');
-  // r = weekly return already net of contributions; chaining it gives the time-weighted return
-  let growth = 1;
-  const weekly = c.filter(r => isNum(r[1]) && r[1] > 40000 && isNum(r[2])).map(r => ({d: xlDate(r[1]), v: r[2], g: growth *= 1 + (isNum(r[6]) ? r[6] : 0)}));
-  const iv = c.findIndex(r => r[9] === 'VALOR CARTERA');
-  const months = [];
-  if (iv > 0) {
-    const ret = c.find(r => r[9] === 'RENT. %'), apo = c.find(r => r[9] === 'APORTACIÓN');
-    for (let k = 10; k < c[iv - 1].length; k++)
-      if (isNum(c[iv - 1][k]) && isNum(c[iv][k])) months.push({d: xlDate(c[iv - 1][k]), v: c[iv][k], ret: ret?.[k], apo: apo?.[k]});
-  }
+  // r = weekly return already net of contributions (chained later into the time-weighted return)
+  const weekly = c.filter(r => isNum(r[1]) && r[1] > 40000 && isNum(r[2])).map(r => ({d: xlDate(r[1]), r: isNum(r[6]) ? r[6] : 0}));
   // DETALLE CARTERA: the "Métrica | Valor | Lectura" table you keep by hand
   const det = wb.Sheets['DETALLE CARTERA'] ? rowsOf(wb, 'DETALLE CARTERA') : [];
   const im = det.findIndex(r => r[4] === 'Métrica');
   const metrics = im < 0 ? [] : det.slice(im + 1).filter(r => typeof r[4] === 'string' && isNum(r[6])).map(r => ({name: r[4], v: r[6], note: r[7] || ''}));
-  return {total, cash, invested, mix, brokers, blocks, pat, weekly, months, metrics};
+  return {total, cash, invested, mix, brokers, blocks, pat, weekly, metrics};
 }
 
 // ---------- render ----------
@@ -330,17 +322,22 @@ function render(x, tx) {
   const all = x.blocks.flatMap(b => b.pos.map(p => ({...p, block: b.name})));
   const twr = x.weekly.at(-1).g - 1;
   $('kpis').innerHTML = kpi('INVERTIDO', eur(x.invested)) + kpi('CASH', eur(x.cash)) +
-    kpi('P&L LATENTE (POSICIONES)', sign(all.reduce((s, p) => s + (p.pnl || 0), 0), eur)) + kpi('RENTABILIDAD CARTERA', sign(twr, pct));
+    kpi('P&L LATENTE (POSICIONES)', sign(all.reduce((s, p) => s + (p.pnl || 0), 0), eur)) + kpi(`RENTABILIDAD DESDE ${dstr(x.weekly[0].d).toUpperCase()}`, sign(twr, pct));
   const sp = pat.slice(-12);
   chart('chSpark', {type: 'line', data: {labels: sp.map(p => dstr(p.d)), datasets: [{data: sp.map(p => p.v), borderColor: C.amber, backgroundColor: C.amber + '22', fill: true, pointRadius: 0, borderWidth: 1.5, tension: .2}]},
     options: {...base(eur), scales: {x: {display: false}, y: {display: false}}}});
 
   // 2. Rendimiento
-  // months your sheet fills ahead (e.g. next month repeating this one) are dropped; the running month gets a *
-  const months = x.months.filter(m => isNum(m.ret) && m.d <= now);
-  const cur = m => monthKey(m.d) === monthKey(now);
+  // monthly return = chained weekly returns of that month; the running month gets a *
+  const months = [];
+  for (const p of x.weekly.slice(1)) {
+    const k = monthKey(p.d), m = months.at(-1);
+    if (m?.k === k) m.ret = (1 + m.ret) * (1 + p.r) - 1;
+    else months.push({k, d: new Date(p.d.getFullYear(), p.d.getMonth(), 1), ret: p.r});
+  }
+  const cur = m => m.k === monthKey(now);
   const best = months.reduce((a, m) => m.ret > a.ret ? m : a, months[0]), worst = months.reduce((a, m) => m.ret < a.ret ? m : a, months[0]);
-  $('rendKpis').innerHTML = kpi('RENTABILIDAD TOTAL', sign(twr, pct)) +
+  $('rendKpis').innerHTML = kpi(`RENTABILIDAD DESDE ${dstr(x.weekly[0].d).toUpperCase()}`, sign(twr, pct)) +
     kpi('MEJOR MES', `${sign(best.ret, pct)} <span class="dim">${mlabel(best.d)}</span>`) +
     kpi('PEOR MES', `${sign(worst.ret, pct)} <span class="dim">${mlabel(worst.d)}</span>`) +
     kpi('MESES EN POSITIVO', `${months.filter(m => m.ret > 0).length} de ${months.length}`);
@@ -428,9 +425,22 @@ function decodeText(buf) {
   return t.includes('�') ? new TextDecoder('windows-1252').decode(buf) : t;
 }
 
+// historico.json: weekly returns from 3 Mar 2025 rebuilt from every PP transaction + Yahoo closes (percentages only).
+// It is prepended only if it ends on the first CARTERA week; otherwise the Excel series is used alone.
+let HIST;
+async function withHistory(weekly) {
+  if (HIST === undefined) HIST = await fetch('historico.json', {cache: 'no-cache'}).then(r => r.ok ? r.json() : null).catch(() => null);
+  const h = HIST?.cartera, iso = d => d.toISOString().slice(0, 10);
+  const all = h?.length && weekly.length && h.at(-1).fecha === iso(weekly[0].d)
+    ? [...h.map(p => ({d: new Date(p.fecha + 'T00:00:00Z'), r: p.r})), ...weekly.slice(1)] : weekly;
+  let g = 1;
+  return all.map((p, i) => ({...p, g: g *= 1 + (i ? p.r : 0)}));
+}
+
 async function loadData(xlsxBuf, csvText) {
   const tx = csvText ? parseTx(csvText) : null;
   const x = parseExcel(XLSX.read(xlsxBuf, {type: 'array'}), tx ? holdings(tx) : []);
+  x.weekly = await withHistory(x.weekly);
   render(x, tx);
   $('empty').hidden = true; $('app').hidden = false;
 }
