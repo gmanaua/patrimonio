@@ -37,7 +37,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid #fff;
 .w2{grid-column:span 2}.w3{grid-column:span 3}.w4{grid-column:span 4}.w6{grid-column:span 6}
 .h1{grid-row:span 1}.h2{grid-row:span 2}.h3{grid-row:span 3}.h4{grid-row:span 4}
 @media (max-width:1200px){.desk{grid-template-columns:1fr}}
-@media (max-width:640px){.desk{padding:8px}.tiles{grid-template-columns:1fr}.w2,.w3,.w4,.w6{grid-column:1/-1}}
+@media (max-width:640px){.pb{overflow-x:auto}.desk{padding:8px}.tiles{grid-template-columns:1fr}.w2,.w3,.w4,.w6{grid-column:1/-1}}
 
 /* panel window */
 .panel{background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;min-width:0;min-height:0}
@@ -48,7 +48,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid #fff;
 .pt .tabs button[aria-pressed=true]{background:var(--amber);color:#000}
 .pt .win{color:#444;letter-spacing:4px;margin-left:auto}
 .pt .tabs + .win{margin-left:0}
-.pb{flex:1;min-height:0;overflow:auto;padding:6px 8px;position:relative}
+.pb{flex:1;min-height:0;overflow:hidden;padding:6px 8px;position:relative}
 .pb.chart{padding:4px}
 
 /* summary list (key / value) */
@@ -66,18 +66,23 @@ td{text-align:right;padding:1px 5px;white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
 td:first-child{max-width:240px;overflow:hidden;text-overflow:ellipsis}
 tbody tr:hover td{background:#141414}
+#mov td:nth-child(3){max-width:260px;overflow:hidden;text-overflow:ellipsis}
 tr.blk td{color:var(--amber);border-top:1px solid var(--line)}
 tr.blk button{background:none;border:0;color:inherit;padding:0;cursor:pointer}
 .wbar{display:inline-block;width:50px;height:7px;background:#1a1a1a;vertical-align:middle;margin-right:6px}
 .wbar i{display:block;height:100%;background:var(--amber)}
 
 /* donut */
-.donut{display:grid;grid-template-columns:1fr 1fr;gap:6px;height:100%;align-items:center}
+.donut{display:grid;grid-template-columns:44% 1fr;gap:10px;height:100%;align-items:center}
 .donut .ring{position:relative;height:100%;min-height:0}
-.donut .ring span{position:absolute;inset:0;display:grid;place-items:center;color:var(--amber);font-size:11px;pointer-events:none}
-.legend{list-style:none;padding:0;margin:0;font-size:11px}
-.legend li{display:grid;grid-template-columns:9px 1fr auto;gap:6px;align-items:center;padding:1px 0}
-.legend i{width:9px;height:9px;display:block}
+.donut .ring span{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;text-align:center}
+.donut .ring b{color:var(--amber);font-size:20px;font-weight:400;line-height:1}
+.donut .ring small{color:var(--dim);font-size:9px;margin-top:2px}
+.legend{list-style:none;padding:0;margin:0}
+.legend li{border-left:3px solid var(--c);padding:1px 0 1px 7px;margin:5px 0;display:grid;grid-template-columns:1fr auto;column-gap:8px}
+.legend .nm{grid-column:1/-1;font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.legend .pc{color:var(--txt);font-size:13px}
+.legend li .dim{font-size:10px;align-self:end}
 
 /* lock */
 #lock{padding:80px 16px;text-align:center}
@@ -123,7 +128,7 @@ tr.blk button{background:none;border:0;color:inherit;padding:0;cursor:pointer}
 
   <section class="screen" id="scr-pos" data-label="3 · POSICIONES — ¿QUÉ TENGO?" aria-label="Posiciones">
     <div class="tiles">
-      <article class="panel w6 h3"><div class="pt"><h2>Posiciones por bloque</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb"><table id="pos"></table></div></article>
+      <article class="panel w6 h4"><div class="pt"><h2>Posiciones por bloque</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb"><table id="pos"></table></div></article>
       <article class="panel w6 h2"><div class="pt"><h2>P&amp;L % por posición · de mejor a peor</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb chart"><canvas id="chPnl"></canvas></div></article>
     </div>
   </section>
@@ -132,7 +137,7 @@ tr.blk button{background:none;border:0;color:inherit;padding:0;cursor:pointer}
     <div class="tiles">
       <article class="panel w4 h2"><div class="pt"><h2>Aportaciones netas por mes</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb chart"><canvas id="chFlow"></canvas></div></article>
       <article class="panel w2 h2"><div class="pt"><h2>Resumen de flujos</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb"><dl class="sum" id="sumFlow"></dl></div></article>
-      <article class="panel w6 h3"><div class="pt"><h2>Movimientos</h2><div class="tabs" id="movFilter" role="group" aria-label="Filtrar movimientos"></div></div><div class="pb"><table id="mov"></table></div></article>
+      <article class="panel w6 h4"><div class="pt"><h2>Movimientos</h2><div class="tabs" id="movFilter" role="group" aria-label="Filtrar movimientos"></div></div><div class="pb"><table id="mov"></table></div></article>
     </div>
   </section>
 
@@ -267,15 +272,18 @@ let model = null, txs = null, period = 'all', movFilter = 'all', donutBy = 'tipo
 
 function drawDonut() {
   const items = {tipo: model.mix, bloque: model.blocks.map(b => [b.name, b.value]), broker: model.brokers}[donutBy];
-  const total = items.reduce((s, [, v]) => s + v, 0);
+  const total = items.reduce((s, [, v]) => s + v, 0), sorted = [...items].sort((a, b) => b[1] - a[1]);
+  // thin segmented ring in amber tones, largest slice first and brightest
+  const tones = ['#f7a325', '#e8e8e8', '#a8681a', '#5c5c5c', '#ffd28a'];
   chart('dRep', {
     type: 'doughnut',
-    data: {labels: items.map(i => i[0]), datasets: [{data: items.map(i => i[1]), backgroundColor: C.cats, borderColor: '#040404', borderWidth: 2}]},
-    options: {maintainAspectRatio: false, animation: false, cutout: '64%', plugins: {legend: {display: false},
+    data: {labels: sorted.map(i => i[0]), datasets: [{data: sorted.map(i => i[1]), backgroundColor: tones, borderWidth: 0, spacing: 3}]},
+    options: {maintainAspectRatio: false, animation: false, cutout: '82%', rotation: -90, plugins: {legend: {display: false},
       tooltip: {callbacks: {label: c => `${c.label}: ${eur(c.parsed)} (${pct(c.parsed / total)})`}}}},
   });
-  $('cRep').textContent = eur(total).replace(/,\d+/, '');
-  $('lRep').innerHTML = items.map(([n, v], i) => `<li><i style="background:${C.cats[i]}"></i><span>${n}</span><span>${pct(v / total)}</span></li>`).join('');
+  const [topName, topV] = sorted[0];
+  $('cRep').innerHTML = `<b>${pct(topV / total).replace(/,\d+/, '')}</b><small>${topName}</small>`;
+  $('lRep').innerHTML = sorted.map(([n, v], i) => `<li style="--c:${tones[i]}"><span class="nm">${n}</span><span class="pc">${pct(v / total)}</span><span class="dim">${eur(v).replace(/,\d+/, '')}</span></li>`).join('');
 }
 
 function drawReturns() {
@@ -293,7 +301,10 @@ function drawMovements() {
     flow: t => t.type === 'Depósito' || t.type === 'Retirada', inc: t => t.type === 'Intereses' || t.type === 'Dividendo'}[movFilter];
   const color = {Compra: 'dn', Venta: 'up', Depósito: 'up', Retirada: 'dn', Intereses: 'up', Dividendo: 'up'};
   $('mov').innerHTML = '<thead><tr><th>Fecha</th><th>Tipo</th><th>Activo</th><th>Cuenta</th><th>Títulos</th><th>Importe</th></tr></thead><tbody>' +
-    txs.filter(keep).slice(-60).reverse().map(t => `<tr><td>${t.date.toLocaleDateString('es-ES', {day: '2-digit', month: '2-digit', year: '2-digit'})}</td><td class="${color[t.type] || ''}" style="text-align:left">${t.type}</td><td style="text-align:left">${t.asset || ''}</td><td class="dim" style="text-align:left">${t.account}</td><td class="dim">${t.shares ? t.shares.toLocaleString('es-ES', {maximumFractionDigits: 4}) : ''}</td><td>${eur(t.net)}</td></tr>`).join('') + '</tbody>';
+    txs.filter(keep).slice(-80).reverse().map(t => `<tr><td>${t.date.toLocaleDateString('es-ES', {day: '2-digit', month: '2-digit', year: '2-digit'})}</td><td class="${color[t.type] || ''}" style="text-align:left">${t.type}</td><td style="text-align:left">${t.asset || ''}</td><td class="dim" style="text-align:left">${t.account}</td><td class="dim">${t.shares ? t.shares.toLocaleString('es-ES', {maximumFractionDigits: 4}) : ''}</td><td>${eur(t.net)}</td></tr>`).join('') + '</tbody>';
+  // show only the rows that fit the panel: no scrollbar
+  const pb = $('mov').parentElement, body = $('mov').tBodies[0];
+  while (pb.scrollHeight > pb.clientHeight && body.rows.length > 1) body.lastElementChild.remove();
 }
 
 function render(x, tx) {
@@ -395,14 +406,13 @@ function render(x, tx) {
       {type: 'line', label: 'Acumulado', data: cum, borderColor: C.txt, pointRadius: 0, borderWidth: 1.2, yAxisID: 'y1'}]},
     options: {...base(eur, {y1: {position: 'right', grid: {display: false}, ticks: {callback: eur, maxTicksLimit: 6}}}),
       plugins: {legend: {display: true, position: 'top', align: 'end', labels: {boxWidth: 8, boxHeight: 8}}, tooltip: {callbacks: {label: c => `${c.dataset.label}: ${eur(c.parsed.y)}`}}}}});
-  const tot = type => tx.filter(t => t.type === type).reduce((s, t) => s + t.net, 0), cnt = type => tx.filter(t => t.type === type).length;
+  const tot = type => tx.filter(t => t.type === type).reduce((s, t) => s + t.net, 0);
   const months12 = new Date(now.getFullYear(), now.getMonth() - 11, 1);
   sum('sumFlow', [
     [null, 'APORTADO NETO'], ['', eur(acc)],
     ['Últimos 12 meses', eur(tx.filter(t => t.date >= months12 && (t.type === 'Depósito' || t.type === 'Retirada')).reduce((s, t) => s + (t.type === 'Depósito' ? t.net : -t.net), 0))],
     [null, 'INGRESOS PASIVOS'], ['Intereses', eur(tot('Intereses'))], ['Dividendos', eur(tot('Dividendo'))],
     [null, 'COSTES'], ['Comisiones', eur(tx.reduce((s, t) => s + t.fees, 0))], ['Impuestos', eur(tx.reduce((s, t) => s + t.taxes, 0))],
-    [null, 'OPERACIONES'], ['Compras', cnt('Compra')], ['Ventas', cnt('Venta')],
   ]);
   tabs('movFilter', [['TODOS', 'all'], ['COMPRAS', 'buy'], ['VENTAS', 'sell'], ['APORTACIONES', 'flow'], ['INGRESOS', 'inc']], movFilter, v => { movFilter = v; drawMovements() });
   drawMovements();
@@ -430,8 +440,9 @@ async function loadData(xlsxBuf, csvText) {
   const tx = csvText ? parseTx(csvText) : null;
   const x = parseExcel(XLSX.read(xlsxBuf, {type: 'array'}), tx ? holdings(tx) : []);
   x.weekly = await withHistory(x.weekly);
-  render(x, tx);
+  // show the app first: panels need their real size to fit their content
   $('empty').hidden = true; $('app').hidden = false;
+  render(x, tx);
 }
 
 // data/*.bin = salt(16) | iv(12) | AES-256-GCM, key = PBKDF2-SHA256(password, salt, 250k) — written by sync.js
