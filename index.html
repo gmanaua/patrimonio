@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patrimonio Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#000;--panel:#0a0a0a;--line:#262626;--amber:#ffa028;--txt:#e8e8e8;--dim:#8a8a8a;--up:#2fd16b;--dn:#ff4d4d;--blue:#3ea6ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:13px/1.4 "IBM Plex Mono",Consolas,monospace}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:var(--amber);color:#000;padding:4px 12px;font-weight:600}
+header .grow{flex:1}
+button{font:inherit;background:#000;color:var(--amber);border:1px solid #000;padding:2px 10px;cursor:pointer}
+button:focus-visible{outline:2px solid #fff}
+main{display:grid;gap:8px;padding:8px;grid-template-columns:repeat(12,1fr)}
+section{background:var(--panel);border:1px solid var(--line);min-width:0}
+section h2{margin:0;font-size:12px;color:var(--amber);border-bottom:1px solid var(--line);padding:3px 8px;text-transform:uppercase;letter-spacing:.05em}
+section h2 b{color:#000;background:var(--amber);padding:0 4px;margin-right:6px}
+.body{padding:8px}
+.c12{grid-column:span 12}.c8{grid-column:span 8}.c6{grid-column:span 6}.c4{grid-column:span 4}
+@media (max-width:900px){.c8,.c6,.c4{grid-column:span 12}}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.kpi .l{color:var(--dim);font-size:11px}.kpi .v{font-size:22px;color:var(--amber)}
+.up{color:var(--up)}.dn{color:var(--dn)}.dim{color:var(--dim)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{color:var(--dim);font-weight:400;text-align:right;border-bottom:1px solid var(--line);padding:2px 6px}
+td{text-align:right;padding:2px 6px;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+tr.blk td{color:var(--amber);border-top:1px solid var(--line);font-weight:600}
+tbody tr:hover td{background:#161616}
+.scroll{overflow-x:auto}
+#mov td{white-space:nowrap}#mov td:nth-child(3){max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.bar{display:grid;grid-template-columns:130px 1fr 70px;gap:8px;align-items:center;margin:3px 0}
+.bar i{display:block;height:10px;background:var(--amber)}
+.chart{position:relative;height:240px}
+#empty{padding:40px 16px;text-align:center;color:var(--dim)}
+#empty button{border-color:var(--amber);font-size:15px;padding:6px 18px;margin:8px}
+</style>
+</head>
+<body>
+<header>
+  <span>PATRIMONIO &lt;GO&gt;</span>
+  <span class="grow" id="status">SIN DATOS</span>
+  <button id="btnPick">CONECTAR ARCHIVOS</button>
+  <button id="btnReconnect" hidden>RECONECTAR</button>
+</header>
+<div id="empty">
+  <p>Conecta tu Excel (.xlsx) y el CSV de transacciones de Portfolio Performance.<br>
+  Los archivos se leen en tu navegador: no se suben a ningún sitio.</p>
+  <p>Se recarga solo cada vez que guardas el Excel o vuelves a exportar el CSV (Chrome / Edge).</p>
+</div>
+<main id="app" hidden>
+  <section class="c12"><h2><b>1</b>Resumen</h2><div class="body kpis" id="kpis"></div></section>
+  <section class="c6"><h2><b>2</b>Patrimonio total · semanal</h2><div class="body chart"><canvas id="chPat"></canvas></div></section>
+  <section class="c6"><h2><b>3</b>Track record cartera · rent. acumulada</h2><div class="body chart"><canvas id="chTr"></canvas></div></section>
+  <section class="c8"><h2><b>4</b>Posiciones</h2><div class="body scroll"><table id="pos"></table></div></section>
+  <section class="c4"><h2><b>5</b>Asignación</h2><div class="body" id="alloc"></div></section>
+  <section class="c12"><h2><b>6</b>Rentabilidad mensual</h2><div class="body scroll"><table id="month"></table></div></section>
+  <section class="c6"><h2><b>7</b>Aportaciones netas acumuladas · PP</h2><div class="body chart"><canvas id="chFlow"></canvas></div></section>
+  <section class="c6"><h2><b>8</b>Últimos movimientos · PP</h2><div class="body scroll"><div id="flowSum" class="kpis"></div><table id="mov"></table></div></section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const eur = n => n == null || isNaN(n) ? '—' : n.toLocaleString('es-ES', {style: 'currency', currency: 'EUR', useGrouping: 'always'});
+const pct = n => n == null || isNaN(n) ? '—' : (n * 100).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '%';
+const cls = n => n > 0 ? 'up' : n < 0 ? 'dn' : '';
+const sign = (n, f) => `<span class="${cls(n)}">${n > 0 ? '+' : ''}${f(n)}</span>`;
+const isNum = v => typeof v === 'number' && isFinite(v);
+const xlDate = s => new Date(Math.round((s - 25569) * 864e5));
+const dstr = d => d.toLocaleDateString('es-ES', {day: '2-digit', month: 'short', year: '2-digit'});
+const esNum = s => s ? +s.replace(/\./g, '').replace(',', '.') : 0;
+
+// ---------- parsing ----------
+function rowsOf(wb, name) {
+  const ws = wb.Sheets[name];
+  if (!ws) throw new Error(`No encuentro la hoja "${name}" en el Excel`);
+  return XLSX.utils.sheet_to_json(ws, {header: 1, raw: true, defval: null});
+}
+
+function parseCSV(t) {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (q) { if (c === '"') { if (t[i + 1] === '"') { f += '"'; i++ } else q = false } else f += c }
+    else if (c === '"') q = true;
+    else if (c === ';') { row.push(f); f = '' }
+    else if (c === '\n') { row.push(f); rows.push(row); row = []; f = '' }
+    else if (c !== '\r') f += c;
+  }
+  if (f || row.length) { row.push(f); rows.push(row) }
+  const head = rows.shift().map(h => h.replace(/^﻿/, '').trim());
+  return rows.filter(r => r.length > 1).map(r => Object.fromEntries(head.map((h, i) => [h, (r[i] || '').trim()])));
+}
+
+function parseTx(csvText) {
+  return parseCSV(csvText).map(r => ({
+    date: new Date(r['Fecha'].replace(' ', 'T')),
+    type: r['Tipo'], asset: r['Activo'], shares: esNum(r['Títulos']),
+    amount: esNum(r['Cantidad']), fees: esNum(r['Comisiones']), taxes: esNum(r['Impuestos']),
+    net: esNum(r['Valor neto de transacción']), account: r['Cuenta'],
+  })).filter(t => !isNaN(t.date)).sort((a, b) => a.date - b.date);
+}
+
+function holdings(tx) {
+  const h = {};
+  for (const t of tx) if (t.asset && (t.type === 'Compra' || t.type === 'Venta'))
+    h[t.asset] = (h[t.asset] || 0) + (t.type === 'Compra' ? t.shares : -t.shares);
+  return Object.entries(h).filter(([, q]) => q > 0.01);
+}
+
+// Excel stock data-type cells read as #VALUE!: recover the name by matching a quantity in the row that holds the same market value.
+function stockName(rows, vm, held) {
+  for (const r of rows) {
+    if (!r.includes(vm)) continue;
+    for (const v of r) {
+      if (!isNum(v) || v === vm) continue;
+      const m = held.find(([, q]) => Math.abs(v - q) / q < 0.015);
+      if (m) return m[0];
+    }
+  }
+  return null;
+}
+
+function parseExcel(wb, held) {
+  const g = rowsOf(wb, 'GENERAL');
+  const find = label => g.find(r => r[0] === label);
+  const total = find('TOTAL')[1], cash = find('CASH')[1], invested = find('INVERTIDO')[1];
+  const mix = g.filter(r => typeof r[4] === 'string' && isNum(r[5]) && ['CASH', 'R. VAR', 'R. FIJA'].includes(r[4])).map(r => [r[4], r[5]]);
+  const brokers = ['Trade Republic', 'MyInvestor', 'IBKR'].map(b => find(b)).filter(Boolean).map(r => [r[0], r[1]]);
+
+  // blocks: label + value, no cost column; positions: value + cost (col 4)
+  const blocks = []; let i = g.indexOf(find('INVERTIDO')) + 1;
+  for (; i < g.length; i++) {
+    const r = g[i];
+    if (r.every(v => v == null)) continue;
+    if (!isNum(r[1])) break;
+    if (isNum(r[4])) {
+      const name = typeof r[0] === 'string' ? r[0] : stockName(g, r[5], held) || '¿acción?';
+      blocks.at(-1)?.pos.push({name, value: r[1], weight: r[2], cost: r[4], pnl: r[6], ret: r[7]});
+    } else if (typeof r[0] === 'string') blocks.push({name: r[0], value: r[1], weight: r[2], pos: []});
+  }
+
+  const pat = rowsOf(wb, 'PATRIMONIO').filter(r => isNum(r[1]) && r[1] > 40000 && isNum(r[2])).map(r => ({d: xlDate(r[1]), v: r[2]}));
+
+  const c = rowsOf(wb, 'CARTERA');
+  const weekly = c.filter(r => isNum(r[1]) && r[1] > 40000 && isNum(r[2])).map(r => ({d: xlDate(r[1]), v: r[2], ac: r[7]}));
+  const iv = c.findIndex(r => r[9] === 'VALOR CARTERA');
+  const months = [];
+  if (iv > 0) {
+    const ret = c.find(r => r[9] === 'RENT. %'), apo = c.find(r => r[9] === 'APORTACIÓN');
+    for (let k = 10; k < c[iv - 1].length; k++)
+      if (isNum(c[iv - 1][k]) && isNum(c[iv][k])) months.push({d: xlDate(c[iv - 1][k]), v: c[iv][k], ret: ret?.[k], apo: apo?.[k]});
+  }
+  return {total, cash, invested, mix, brokers, blocks, pat, weekly, months};
+}
+
+// ---------- render ----------
+const charts = {};
+Chart.defaults.color = '#8a8a8a'; Chart.defaults.borderColor = '#1f1f1f';
+Chart.defaults.font.family = '"IBM Plex Mono", Consolas, monospace';
+function line(id, labels, data, color, fmt, opts = {}) {
+  charts[id]?.destroy();
+  charts[id] = new Chart($(id), {
+    type: 'line',
+    data: {labels, datasets: [{data, borderColor: color, backgroundColor: color + '22', fill: true, pointRadius: 0, borderWidth: 1.5, tension: .15, ...opts}]},
+    options: {maintainAspectRatio: false, animation: false, interaction: {mode: 'index', intersect: false},
+      plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => fmt(c.parsed.y)}}},
+      scales: {x: {ticks: {maxTicksLimit: 8}}, y: {ticks: {callback: fmt}}}},
+  });
+}
+
+function render(x, tx) {
+  const last = x.pat.at(-1), prev = x.pat.at(-2);
+  const pnl = x.blocks.flatMap(b => b.pos).reduce((s, p) => s + (p.pnl || 0), 0);
+  const ac = x.weekly.at(-1)?.ac;
+  $('kpis').innerHTML = [
+    ['PATRIMONIO', eur(x.total)],
+    ['VAR. SEMANA', prev ? sign(last.v - prev.v, eur) + ' ' + sign(last.v / prev.v - 1, pct) : '—'],
+    ['INVERTIDO', eur(x.invested)],
+    ['CASH', eur(x.cash)],
+    ['P&L LATENTE', sign(pnl, eur)],
+    ['RENT. AC. CARTERA', sign(ac, pct)],
+  ].map(([l, v]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+
+  line('chPat', x.pat.map(p => dstr(p.d)), x.pat.map(p => p.v), '#ffa028', eur);
+  const trUp = (ac ?? 0) >= 0 ? '#2fd16b' : '#ff4d4d';
+  line('chTr', x.weekly.map(p => dstr(p.d)), x.weekly.map(p => p.ac), trUp, pct);
+
+  $('pos').innerHTML = '<thead><tr><th>Activo</th><th>Peso</th><th>Invertido</th><th>Valor</th><th>P&L €</th><th>P&L %</th></tr></thead><tbody>' +
+    x.blocks.map(b => `<tr class="blk"><td>${b.name}</td><td>${pct(b.weight)}</td><td></td><td>${eur(b.value)}</td><td></td><td></td></tr>` +
+      b.pos.map(p => `<tr><td>${p.name}</td><td>${pct(p.weight)}</td><td>${eur(p.cost)}</td><td>${eur(p.value)}</td><td>${sign(p.pnl, eur)}</td><td>${sign(p.ret, pct)}</td></tr>`).join('')).join('') + '</tbody>';
+
+  const bars = (title, items) => {
+    const sum = items.reduce((s, [, v]) => s + v, 0);
+    return `<div class="dim" style="margin:6px 0 2px">${title}</div>` + items.map(([n, v]) =>
+      `<div class="bar"><span>${n}</span><i style="width:${(v / sum * 100).toFixed(1)}%"></i><span style="text-align:right">${pct(v / sum)}</span></div>`).join('');
+  };
+  $('alloc').innerHTML = bars('TIPO', x.mix) + bars('BLOQUE (INVERTIDO)', x.blocks.map(b => [b.name, b.value])) + bars('BRÓKER', x.brokers);
+
+  $('month').innerHTML = '<thead><tr><th></th>' + x.months.map(m => `<th>${m.d.toLocaleDateString('es-ES', {month: 'short', year: '2-digit'})}</th>`).join('') + '</tr></thead><tbody>' +
+    `<tr><td>Valor</td>${x.months.map(m => `<td>${eur(m.v)}</td>`).join('')}</tr>` +
+    `<tr><td>Aportación</td>${x.months.map(m => `<td class="dim">${isNum(m.apo) ? eur(m.apo) : ''}</td>`).join('')}</tr>` +
+    `<tr><td>Rent. %</td>${x.months.map(m => `<td>${isNum(m.ret) ? sign(m.ret, pct) : ''}</td>`).join('')}</tr></tbody>`;
+
+  if (!tx) return;
+  let acc = 0;
+  const flows = tx.filter(t => t.type === 'Depósito' || t.type === 'Retirada');
+  line('chFlow', flows.map(t => dstr(t.date)), flows.map(t => acc += t.type === 'Depósito' ? t.net : -t.net), '#3ea6ff', eur, {stepped: true, tension: 0});
+  const sum = type => tx.filter(t => t.type === type).reduce((s, t) => s + t.net, 0);
+  $('flowSum').innerHTML = [
+    ['APORTADO NETO', eur(acc)], ['INTERESES', eur(sum('Intereses'))], ['DIVIDENDOS', eur(sum('Dividendo'))],
+    ['COMISIONES', eur(tx.reduce((s, t) => s + t.fees, 0))], ['IMPUESTOS', eur(tx.reduce((s, t) => s + t.taxes, 0))],
+  ].map(([l, v]) => `<div class="kpi"><div class="l">${l}</div><div class="v" style="font-size:16px">${v}</div></div>`).join('');
+  const color = {Compra: 'dn', Venta: 'up', Depósito: 'up', Retirada: 'dn', Intereses: 'up', Dividendo: 'up'};
+  $('mov').innerHTML = '<thead><tr><th>Fecha</th><th>Tipo</th><th>Activo</th><th>Cuenta</th><th>Importe</th></tr></thead><tbody>' +
+    tx.slice(-25).reverse().map(t => `<tr><td>${t.date.toLocaleDateString('es-ES', {day: '2-digit', month: '2-digit', year: '2-digit'})}</td><td class="${color[t.type] || ''}">${t.type}</td><td style="text-align:left">${t.asset || ''}</td><td class="dim">${t.account}</td><td>${eur(t.net)}</td></tr>`).join('') + '</tbody>';
+}
+
+// ---------- files + auto refresh ----------
+async function readText(file) {
+  const buf = await file.arrayBuffer();
+  const t = new TextDecoder('utf-8').decode(buf);
+  return t.includes('�') ? new TextDecoder('windows-1252').decode(buf) : t;
+}
+
+async function loadData(xlsxBuf, csvText) {
+  const tx = csvText ? parseTx(csvText) : null;
+  const x = parseExcel(XLSX.read(xlsxBuf, {type: 'array'}), tx ? holdings(tx) : []);
+  render(x, tx);
+  $('empty').hidden = true; $('app').hidden = false;
+}
+
+let handles = [], stamps = '';
+async function refresh(force) {
+  try {
+    const files = await Promise.all(handles.map(h => h.getFile()));
+    const s = files.map(f => f.name + f.lastModified).join('|');
+    if (!force && s === stamps) return;
+    const xl = files.find(f => /\.xls[xm]$/i.test(f.name)), csv = files.find(f => /\.csv$/i.test(f.name));
+    if (!xl) throw new Error('Falta el archivo .xlsx');
+    await loadData(await xl.arrayBuffer(), csv ? await readText(csv) : null);
+    stamps = s;
+    $('status').textContent = `${files.map(f => f.name).join(' + ')} · ACTUALIZADO ${new Date().toLocaleTimeString('es-ES')}`;
+  } catch (e) {
+    // Excel may be mid-save: keep the old view and retry on the next tick
+    $('status').textContent = 'ERROR: ' + e.message;
+  }
+}
+
+// store file handles so a reopened tab only needs one click to re-grant access
+const idb = (mode, fn) => new Promise((ok, ko) => {
+  const r = indexedDB.open('patrimonio', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('kv');
+  r.onsuccess = () => { const q = fn(r.result.transaction('kv', mode).objectStore('kv')); q.onsuccess = () => ok(q.result); q.onerror = () => ko(q.error) };
+  r.onerror = () => ko(r.error);
+});
+
+async function start(hs) {
+  handles = hs; stamps = '';
+  await refresh(true);
+  $('btnReconnect').hidden = true;
+}
+
+$('btnPick').onclick = async () => {
+  if (!window.showOpenFilePicker) {
+    // Firefox/Safari: one-shot load, no auto refresh
+    const inp = Object.assign(document.createElement('input'), {type: 'file', multiple: true, accept: '.xlsx,.xlsm,.csv'});
+    inp.onchange = () => start([...inp.files].map(f => ({getFile: async () => f})));
+    return inp.click();
+  }
+  const hs = await window.showOpenFilePicker({multiple: true, types: [{description: 'Excel o CSV', accept: {'application/octet-stream': ['.xlsx', '.xlsm', '.csv']}}]});
+  try { await idb('readwrite', s => s.put(hs, 'handles')) } catch {}
+  start(hs);
+};
+
+$('btnReconnect').onclick = async () => {
+  const hs = await idb('readonly', s => s.get('handles'));
+  for (const h of hs) if (await h.requestPermission({mode: 'read'}) !== 'granted') return;
+  start(hs);
+};
+
+(async () => {
+  try { if ((await idb('readonly', s => s.get('handles')))?.length) $('btnReconnect').hidden = false } catch {}
+})();
+setInterval(() => handles.length && refresh(false), 3000);
+</script>
+</body>
+</html>
