@@ -118,8 +118,7 @@ tr.blk button{background:none;border:0;color:inherit;padding:0;cursor:pointer}
     <div class="tiles">
       <article class="panel w2 h4"><div class="pt"><h2>Resumen</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb"><dl class="sum" id="sumPat"></dl></div></article>
       <article class="panel w4 h2"><div class="pt"><h2>Patrimonio total · semanal</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb chart"><canvas id="chPat"></canvas></div></article>
-      <article class="panel w2 h2"><div class="pt"><h2>Reparto</h2><div class="tabs" id="tabDonut" role="group" aria-label="Reparto por"></div></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dRep"></canvas><span id="cRep"></span></div><ul class="legend" id="lRep"></ul></div></div></article>
-      <article class="panel w2 h2"><div class="pt"><h2>Concentración</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb"><dl class="sum" id="sumConc"></dl></div></article>
+      <article class="panel w4 h2"><div class="pt"><h2>Reparto</h2><div class="tabs" id="tabDonut" role="group" aria-label="Reparto por"></div></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dRep"></canvas><span id="cRep"></span></div><ul class="legend row" id="lRep"></ul></div></div></article>
     </div>
   </section>
 
@@ -240,11 +239,7 @@ function parseExcel(wb, held) {
   const c = rowsOf(wb, 'CARTERA');
   // r = weekly return already net of contributions (chained later into the time-weighted return)
   const weekly = c.filter(r => isNum(r[1]) && r[1] > 40000 && isNum(r[2])).map(r => ({d: xlDate(r[1]), r: isNum(r[6]) ? r[6] : 0}));
-  // DETALLE CARTERA: the "Métrica | Valor | Lectura" table you keep by hand
-  const det = wb.Sheets['DETALLE CARTERA'] ? rowsOf(wb, 'DETALLE CARTERA') : [];
-  const im = det.findIndex(r => r[4] === 'Métrica');
-  const metrics = im < 0 ? [] : det.slice(im + 1).filter(r => typeof r[4] === 'string' && isNum(r[6])).map(r => ({name: r[4], v: r[6], note: r[7] || ''}));
-  return {total, cash, invested, mix, brokers, blocks, pat, weekly, metrics};
+  return {total, cash, invested, mix, brokers, blocks, pat, weekly};
 }
 
 // ---------- render ----------
@@ -356,7 +351,6 @@ function render(x, tx) {
   chart('chPat', {type: 'line', data: {labels: pat.map(p => dstr(p.d)), datasets: [area(pat.map(p => p.v), C.amber)]}, options: base(eur)});
   tabs('tabDonut', [['TIPO', 'tipo'], ['BLOQUE', 'bloque'], ['BRÓKER', 'broker']], donutBy, v => { donutBy = v; drawDonut() });
   drawDonut();
-  sum('sumConc', x.metrics.length ? x.metrics.map(m => [m.name.replace(/\s*\(.*\)$/, ''), pct(m.v)]) : [[null, 'Sin tabla de métricas en DETALLE CARTERA']]);
 
   // ===== 2 · RENDIMIENTO =====
   // monthly return = chained weekly returns of that month
