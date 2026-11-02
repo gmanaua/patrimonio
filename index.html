@@ -28,6 +28,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid #fff;
 .top nav a b{color:var(--amber);font-weight:400;margin-right:4px}
 .top .grow{flex:1;color:var(--dim);font-size:11px;text-align:right}
 .top button{border-color:var(--line);color:var(--dim);font-size:11px;padding:1px 8px}
+.top button[aria-pressed=true]{color:var(--amber);border-color:var(--amber)}
 
 /* monitors */
 .desk{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px;max-width:1900px;margin:0 auto}
@@ -95,6 +96,7 @@ tr.blk button{background:none;border:0;color:inherit;padding:0;cursor:pointer}
   <span class="brand">PATRIMONIO &lt;GO&gt;</span>
   <nav aria-label="Pantallas"><a href="#scr-pat"><b>1</b>PATRIMONIO</a><a href="#scr-rend"><b>2</b>RENDIMIENTO</a><a href="#scr-pos"><b>3</b>POSICIONES</a><a href="#scr-flu"><b>4</b>FLUJOS</a></nav>
   <span class="grow" id="status">CARGANDO…</span>
+  <button id="hideMoney" type="button" aria-pressed="false" title="Ocultar o mostrar las cifras en euros">OCULTAR €</button>
   <button id="logout" type="button">SALIR</button>
 </div>
 <div id="lock" hidden>
@@ -144,7 +146,10 @@ tr.blk button{background:none;border:0;color:inherit;padding:0;cursor:pointer}
 </main>
 <script>
 const $ = id => document.getElementById(id);
-const eur = n => n == null || isNaN(n) ? '—' : n.toLocaleString('es-ES', {style: 'currency', currency: 'EUR', useGrouping: 'always'});
+// every euro figure goes through eur(), so masking here hides them all (tables, lists, axes, tooltips)
+let HIDE = false;
+try { HIDE = localStorage.getItem('patrimonio-ocultar') === '1' } catch {}
+const eur = n => n == null || isNaN(n) ? '—' : HIDE ? '••••• €' : n.toLocaleString('es-ES', {style: 'currency', currency: 'EUR', useGrouping: 'always'});
 const pct = n => n == null || isNaN(n) ? '—' : (n * 100).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '%';
 const cls = n => n > 0 ? 'up' : n < 0 ? 'dn' : '';
 const sign = (n, f) => `<span class="${cls(n)}">${n > 0 ? '+' : ''}${f(n)}</span>`;
@@ -491,6 +496,14 @@ $('lockForm').onsubmit = e => {
   refresh();
 };
 $('logout').onclick = () => { pw.set(null); location.reload() };
+const syncHideBtn = () => { $('hideMoney').setAttribute('aria-pressed', HIDE); $('hideMoney').textContent = HIDE ? 'MOSTRAR €' : 'OCULTAR €' };
+$('hideMoney').onclick = () => {
+  HIDE = !HIDE;
+  try { localStorage.setItem('patrimonio-ocultar', HIDE ? '1' : '0') } catch {}
+  syncHideBtn();
+  if (model) render(model, txs);
+};
+syncHideBtn();
 if (!password) $('lock').hidden = false;
 refresh();
 setInterval(refresh, 60000);
