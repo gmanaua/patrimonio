@@ -8,8 +8,9 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@2.3.1/dist/chartjs-chart-treemap.min.js"></script>
 <style>
-:root{--bg:#000;--bezel:#0c0c0c;--panel:#040404;--bar:#151515;--line:#262626;--amber:#f7a325;--txt:#d6d6d6;--dim:#777;--up:#35c45a;--dn:#e5484d}
+:root{--bezel:#0c0c0c;--panel:#040404;--bar:#151515;--line:#262626;--amber:#f7a325;--txt:#d6d6d6;--dim:#777;--up:#35c45a;--dn:#e5484d}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{background:#000}
@@ -32,13 +33,12 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid #fff;
 
 /* monitors */
 .desk{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px;max-width:1900px;margin:0 auto}
-.screen{background:var(--bezel);border:1px solid #1f1f1f;border-radius:3px;padding:6px 6px 20px;position:relative;scroll-margin-top:50px;min-width:0}
-.screen::after{content:attr(data-label);position:absolute;left:8px;bottom:4px;font-size:10px;color:#444;letter-spacing:.05em}
+.screen{background:var(--bezel);border:1px solid #1f1f1f;border-radius:3px;padding:6px;scroll-margin-top:50px;min-width:0}
 .tiles{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:112px;gap:6px}
 .w2{grid-column:span 2}.w3{grid-column:span 3}.w4{grid-column:span 4}.w6{grid-column:span 6}
-.h1{grid-row:span 1}.h2{grid-row:span 2}.h3{grid-row:span 3}.h4{grid-row:span 4}
+.h1{grid-row:span 1}.h2{grid-row:span 2}.h4{grid-row:span 4}
 @media (max-width:1200px){.desk{grid-template-columns:1fr}}
-@media (max-width:640px){.pb{overflow-x:auto}.desk{padding:8px}.tiles{grid-template-columns:1fr}.w2,.w3,.w4,.w6{grid-column:1/-1}}
+@media (max-width:640px){.desk{padding:8px}.tiles{grid-template-columns:1fr}.w2,.w3,.w4,.w6{grid-column:1/-1}}
 
 /* panel window */
 .panel{background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;min-width:0;min-height:0}
@@ -47,47 +47,26 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid #fff;
 .pt .tabs{margin-left:auto;display:flex;gap:2px}
 .pt .tabs button{border:0;background:none;color:var(--dim);padding:0 5px;font-size:10px;cursor:pointer}
 .pt .tabs button[aria-pressed=true]{background:var(--amber);color:#000}
-.pt .win{color:#444;letter-spacing:4px;margin-left:auto}
-.pt .tabs + .win{margin-left:0}
 .pb{flex:1;min-height:0;overflow:hidden;padding:6px 8px;position:relative}
 .pb.chart{padding:4px}
 
-/* summary list (key / value) */
-.sum{margin:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px}
-.sum dt{color:var(--amber);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sum dd{margin:0;text-align:right;white-space:nowrap}
-.sum .hd{grid-column:1/-1;color:var(--dim);border-bottom:1px solid var(--line);margin-top:6px;padding-bottom:1px;font-size:10px}
-.sum .hd:first-child{margin-top:0}
-.sum .big{grid-column:1/-1;font-size:26px;color:var(--amber);text-align:left;line-height:1.1}
-
-/* tables */
-table{width:100%;border-collapse:collapse;font-size:11px}
-th{position:sticky;top:-6px;background:var(--panel);color:var(--dim);font-weight:400;text-align:right;border-bottom:1px solid var(--line);padding:2px 5px}
-td{text-align:right;padding:1px 5px;white-space:nowrap}
-th:first-child,td:first-child{text-align:left}
-td:first-child{max-width:240px;overflow:hidden;text-overflow:ellipsis}
-tbody tr:hover td{background:#141414}
-tr.blk td{color:var(--amber);border-top:1px solid var(--line)}
-tr.blk button{background:none;border:0;color:inherit;padding:0;cursor:pointer}
-.wbar{display:inline-block;width:50px;height:7px;background:#1a1a1a;vertical-align:middle;margin-right:6px}
-.wbar i{display:block;height:100%;background:var(--amber)}
+/* big-number tiles */
+.stats{display:grid;height:100%}
+.stat{display:flex;flex-direction:column;justify-content:center;padding:0 6px;border-bottom:1px solid var(--line)}
+.stat:last-child{border-bottom:0}
+.stat > span{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.stat b{font-weight:400;font-size:30px;color:var(--amber);line-height:1.15;white-space:nowrap}
+.stat em{font-style:normal;font-size:11px;white-space:nowrap}
 
 /* donut */
-.donut{display:grid;grid-template-columns:44% 1fr;gap:10px;height:100%;align-items:center}
+.donut{display:grid;grid-template-columns:34% 1fr;gap:10px;height:100%;align-items:center}
 .donut .ring{position:relative;height:100%;min-height:0}
 .donut .ring span{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;text-align:center}
 .donut .ring b{color:var(--amber);font-size:20px;font-weight:400;line-height:1}
 .donut .ring small{color:var(--dim);font-size:9px;margin-top:2px}
 .legend{list-style:none;padding:0;margin:0}
-.legend li{border-left:3px solid var(--c);padding:1px 0 1px 7px;margin:5px 0;display:grid;grid-template-columns:1fr auto;column-gap:8px}
-.legend .nm{grid-column:1/-1;font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.legend .pc{color:var(--txt);font-size:13px}
-.legend li .dim{font-size:10px;align-self:end}
-.donut:has(.legend.row){grid-template-columns:34% 1fr}
-.legend.row li{grid-template-columns:minmax(0,1fr) auto 58px;margin:4px 0;align-items:baseline}
-.legend.row .nm{grid-column:auto;font-size:11px;color:var(--txt)}
-.legend.row .pc{font-size:11px}
-.legend.row li .dim{text-align:right}
+.legend li{border-left:3px solid var(--c);padding:1px 0 1px 7px;margin:4px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;font-size:11px}
+.legend .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* lock */
 #lock{padding:80px 16px;text-align:center}
@@ -114,38 +93,37 @@ tr.blk button{background:none;border:0;color:inherit;padding:0;cursor:pointer}
 <div id="empty"><p>Cargando…</p></div>
 <main class="desk" id="app" hidden>
 
-  <section class="screen" id="scr-pat" data-label="1 · PATRIMONIO — ¿CUÁNTO TENGO Y DÓNDE?" aria-label="Patrimonio">
+  <section class="screen" id="scr-pat" aria-label="Patrimonio">
     <div class="tiles">
-      <article class="panel w2 h4"><div class="pt"><h2>Resumen</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb"><dl class="sum" id="sumPat"></dl></div></article>
-      <article class="panel w4 h2"><div class="pt"><h2>Patrimonio total · semanal</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb chart"><canvas id="chPat"></canvas></div></article>
-      <article class="panel w4 h2"><div class="pt"><h2>Reparto</h2><div class="tabs" id="tabDonut" role="group" aria-label="Reparto por"></div></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dRep"></canvas><span id="cRep"></span></div><ul class="legend row" id="lRep"></ul></div></div></article>
+      <article class="panel w2 h4"><div class="pt"><h2>Patrimonio</h2></div><div class="pb"><div class="stats" id="statPat"></div></div></article>
+      <article class="panel w4 h2"><div class="pt"><h2>Evolución semanal</h2></div><div class="pb chart"><canvas id="chPat"></canvas></div></article>
+      <article class="panel w4 h2"><div class="pt"><h2>Reparto</h2><div class="tabs" id="tabDonut" role="group" aria-label="Reparto por"></div></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dRep"></canvas><span id="cRep"></span></div><ul class="legend" id="lRep"></ul></div></div></article>
     </div>
   </section>
 
-  <section class="screen" id="scr-rend" data-label="2 · RENDIMIENTO — ¿CÓMO VOY?" aria-label="Rendimiento">
+  <section class="screen" id="scr-rend" aria-label="Rendimiento">
     <div class="tiles">
       <article class="panel w4 h2"><div class="pt"><h2 id="tTr">Rentabilidad acumulada</h2><div class="tabs" id="periods" role="group" aria-label="Periodo"></div></div><div class="pb chart"><canvas id="chTr"></canvas></div></article>
-      <article class="panel w2 h4"><div class="pt"><h2>Estadísticas</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb"><dl class="sum" id="sumRend"></dl></div></article>
-      <article class="panel w4 h1"><div class="pt"><h2>Rentabilidad por mes · * en curso</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb chart"><canvas id="chMonth"></canvas></div></article>
-      <article class="panel w4 h1"><div class="pt"><h2>Caída desde máximos</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb chart"><canvas id="chDD"></canvas></div></article>
+      <article class="panel w2 h4"><div class="pt"><h2>Rendimiento</h2></div><div class="pb"><div class="stats" id="statRend"></div></div></article>
+      <article class="panel w4 h1"><div class="pt"><h2>Por mes · * en curso</h2></div><div class="pb chart"><canvas id="chMonth"></canvas></div></article>
+      <article class="panel w4 h1"><div class="pt"><h2>Caída desde máximos</h2></div><div class="pb chart"><canvas id="chDD"></canvas></div></article>
     </div>
   </section>
 
-  <section class="screen" id="scr-pos" data-label="3 · POSICIONES — ¿QUÉ TENGO?" aria-label="Posiciones">
+  <section class="screen" id="scr-pos" aria-label="Posiciones">
     <div class="tiles">
-      <article class="panel w6 h4"><div class="pt"><h2>Posiciones por bloque</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb"><table id="pos"></table></div></article>
-      <article class="panel w6 h2"><div class="pt"><h2>P&amp;L % por posición · de mejor a peor</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb chart"><canvas id="chPnl"></canvas></div></article>
+      <article class="panel w6 h4"><div class="pt"><h2>Posiciones · tamaño = peso, color = P&amp;L</h2></div><div class="pb chart"><canvas id="chMap"></canvas></div></article>
+      <article class="panel w6 h2"><div class="pt"><h2>P&amp;L % por posición</h2></div><div class="pb chart"><canvas id="chPnl"></canvas></div></article>
     </div>
   </section>
 
-  <section class="screen" id="scr-flu" data-label="4 · FLUJOS Y DIVERSIFICACIÓN — ¿QUÉ HE APORTADO Y CÓMO ESTÁ REPARTIDO?" aria-label="Flujos y diversificación">
+  <section class="screen" id="scr-flu" aria-label="Flujos y diversificación">
     <div class="tiles">
-      <article class="panel w4 h2 flow"><div class="pt"><h2>Aportaciones netas por mes</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb chart"><canvas id="chFlow"></canvas></div></article>
-      <article class="panel w2 h2 flow"><div class="pt"><h2>Resumen de flujos</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb"><dl class="sum" id="sumFlow"></dl></div></article>
-      <article class="panel w3 h2"><div class="pt"><h2>Concentración · 5 mayores posiciones</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dTop"></canvas><span id="cTop"></span></div><ul class="legend row" id="lTop"></ul></div></div></article>
-      <article class="panel w3 h2"><div class="pt"><h2>Tipo de vehículo</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dVeh"></canvas><span id="cVeh"></span></div><ul class="legend row" id="lVeh"></ul></div></div></article>
-      <article class="panel w3 h2"><div class="pt"><h2>Zona geográfica</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dZona"></canvas><span id="cZona"></span></div><ul class="legend row" id="lZona"></ul></div></div></article>
-      <article class="panel w3 h2"><div class="pt"><h2>Divisa · incluye liquidez</h2><span class="win" aria-hidden="true">— ×</span></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dDiv"></canvas><span id="cDiv"></span></div><ul class="legend row" id="lDiv"></ul></div></div></article>
+      <article class="panel w6 h2 flow"><div class="pt"><h2 id="tFlow">Aportaciones netas por mes</h2></div><div class="pb chart"><canvas id="chFlow"></canvas></div></article>
+      <article class="panel w3 h2"><div class="pt"><h2>Concentración · 5 mayores</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dTop"></canvas><span id="cTop"></span></div><ul class="legend" id="lTop"></ul></div></div></article>
+      <article class="panel w3 h2"><div class="pt"><h2>Tipo de vehículo</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dVeh"></canvas><span id="cVeh"></span></div><ul class="legend" id="lVeh"></ul></div></div></article>
+      <article class="panel w3 h2"><div class="pt"><h2>Zona geográfica</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dZona"></canvas><span id="cZona"></span></div><ul class="legend" id="lZona"></ul></div></div></article>
+      <article class="panel w3 h2"><div class="pt"><h2>Divisa · con liquidez</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dDiv"></canvas><span id="cDiv"></span></div><ul class="legend" id="lDiv"></ul></div></div></article>
     </div>
   </section>
 
@@ -244,7 +222,7 @@ function parseExcel(wb, held) {
 
 // ---------- render ----------
 const charts = {};
-const C = {amber: '#f7a325', up: '#35c45a', dn: '#e5484d', txt: '#d6d6d6', cats: ['#f7a325', '#3ea6ff', '#b58cff', '#8a8a8a', '#e8e8e8']};
+const C = {amber: '#f7a325', up: '#35c45a', dn: '#e5484d', txt: '#d6d6d6'};
 Chart.defaults.color = '#777'; Chart.defaults.borderColor = '#222';
 Chart.defaults.font.family = '"IBM Plex Mono", Consolas, monospace'; Chart.defaults.font.size = 10;
 const mlabel = d => d.toLocaleDateString('es-ES', {month: 'short', year: '2-digit'});
@@ -262,8 +240,11 @@ const base = (fmt, scales = {}) => ({
 });
 const area = (data, color) => ({data, borderColor: color, backgroundColor: color + '30', fill: true, pointRadius: 0, borderWidth: 1.3, tension: .1});
 
-// key/value list: rows = [label, html] or [null, section heading]
-const sum = (id, rows) => $(id).innerHTML = rows.map(([k, v]) => k == null ? `<div class="hd">${v}</div>` : k === '' ? `<div class="big">${v}</div>` : `<dt title="${k}">${k}</dt><dd>${v}</dd>`).join('');
+// big-number tiles: [label, value, optional small line]
+const stats = (id, rows) => {
+  $(id).style.gridTemplateRows = `repeat(${rows.length}, 1fr)`;
+  $(id).innerHTML = rows.map(([l, v, s]) => `<div class="stat"><span>${l}</span><b>${v}</b>${s ? `<em>${s}</em>` : ''}</div>`).join('');
+};
 
 // tabs in a panel title bar: [[label, value]]
 function tabs(id, options, current, onPick) {
@@ -310,11 +291,11 @@ function ring(key, items, center) {
   });
   const [n0, v0] = sorted[0], [cv, cl] = center || [v0 / total, n0];
   $('c' + key).innerHTML = `<b>${pct(cv).replace(/,\d+/, '')}</b><small>${cl}</small>`;
-  $('l' + key).innerHTML = sorted.map(([n, v], i) => `<li style="--c:${TONES[i]}"><span class="nm" title="${n}">${n}</span><span class="pc">${pct(v / total)}</span><span class="dim">${eur(v).replace(/,\d+/, '')}</span></li>`).join('');
+  $('l' + key).innerHTML = sorted.map(([n, v], i) => `<li style="--c:${TONES[i]}"><span class="nm" title="${n}">${n}</span><span>${pct(v / total).replace(/,\d+/, '')}</span></li>`).join('');
 }
 
 function drawDonut() {
-  ring('Rep', {tipo: model.mix, bloque: model.blocks.map(b => [b.name, b.value]), broker: model.brokers}[donutBy]);
+  ring('Rep', {tipo: model.mix, broker: model.brokers}[donutBy]);
 }
 
 function drawReturns() {
@@ -327,29 +308,25 @@ function drawReturns() {
   chart('chTr', {type: 'line', data: {labels: s.map(p => dstr(p.d)), datasets: [area(r, last >= 0 ? C.up : C.dn)]}, options: base(pct)});
 }
 
+// green/red with intensity growing with the size of the gain/loss (saturates at ±30 %)
+const pnlColor = r => `rgba(${r >= 0 ? '53,196,90' : '229,72,77'},${(0.25 + Math.min(Math.abs(r) / 0.3, 1) * 0.65).toFixed(2)})`;
+
 function render(x, tx) {
   model = x; txs = tx;
   const now = new Date(), w = x.weekly, all = x.blocks.flatMap(b => b.pos.map(p => ({...p, block: b.name})));
+  const pp = v => strip(sign(v, pct)), ppEur = v => strip(sign(v, eur));
 
   // ===== 1 · PATRIMONIO =====
   const pat = x.pat, last = pat.at(-1);
-  const before = d => [...pat].reverse().find(p => p.d < d) || pat[0];
-  const chg = ref => `${sign(last.v - ref.v, eur)} ${sign(last.v / ref.v - 1, pct)}`;
-  const yearRef = before(new Date(now.getFullYear(), 0, 1));
+  const monthRef = pat[Math.max(0, pat.length - 5)]; // 4 weeks back: always meaningful, even early in a month
   const pnl = all.reduce((s, p) => s + (p.pnl || 0), 0), cost = all.reduce((s, p) => s + (p.cost || 0), 0);
-  sum('sumPat', [
-    [null, 'PATRIMONIO TOTAL'], ['', eur(x.total)],
-    [null, 'VARIACIÓN (INCLUYE APORTACIONES)'],
-    ['Semana', pat.length > 1 ? chg(pat.at(-2)) : '—'],
-    ['Mes', chg(before(new Date(now.getFullYear(), now.getMonth(), 1)))],
-    [yearRef === pat[0] ? `Desde ${mlabel(pat[0].d)}` : 'Año', chg(yearRef)],
-    [null, 'COMPOSICIÓN'],
-    ['Invertido', eur(x.invested)], ['Liquidez', eur(x.cash)], ['% liquidez', pct(x.cash / x.total)],
-    [null, 'RESULTADO LATENTE (POSICIONES)'],
-    ['Coste', eur(cost)], ['P&L €', sign(pnl, eur)], ['P&L %', sign(pnl / cost, pct)],
+  stats('statPat', [
+    ['Patrimonio total', eur(x.total)],
+    ['Últimas 4 semanas', `<span class="${cls(last.v - monthRef.v)}">${ppEur(last.v - monthRef.v)}</span>`, `<span class="${cls(last.v - monthRef.v)}">${pp(last.v / monthRef.v - 1)}</span> <span class="dim">incluye aportaciones</span>`],
+    ['P&L latente', `<span class="${cls(pnl)}">${ppEur(pnl)}</span>`, `<span class="${cls(pnl)}">${pp(pnl / cost)}</span> <span class="dim">sobre lo invertido</span>`],
   ]);
   chart('chPat', {type: 'line', data: {labels: pat.map(p => dstr(p.d)), datasets: [area(pat.map(p => p.v), C.amber)]}, options: base(eur)});
-  tabs('tabDonut', [['TIPO', 'tipo'], ['BLOQUE', 'bloque'], ['BRÓKER', 'broker']], donutBy, v => { donutBy = v; drawDonut() });
+  tabs('tabDonut', [['TIPO', 'tipo'], ['BRÓKER', 'broker']], donutBy, v => { donutBy = v; drawDonut() });
   drawDonut();
 
   // ===== 2 · RENDIMIENTO =====
@@ -365,46 +342,29 @@ function render(x, tx) {
   const twr = w.at(-1).g - 1, years = (w.at(-1).d - w[0].d) / (365.25 * 864e5), ann = (1 + twr) ** (1 / years) - 1;
   let peak = 0, maxDD = {v: 0, d: w[0].d};
   const dd = w.map(p => { peak = Math.max(peak, p.g); const v = p.g / peak - 1; if (v < maxDD.v) maxDD = {v, d: p.d}; return v });
-  const ext = (arr, f) => arr.reduce((a, b) => f(b) > f(a) ? b : a);
-  const bm = ext(months, m => m.ret), wm = ext(months, m => -m.ret);
-  const wk = w.slice(1), bw = ext(wk, p => p.r), ww = ext(wk, p => -p.r);
-  sum('sumRend', [
-    [null, `RENTABILIDAD DESDE ${dstr(w[0].d).toUpperCase()}`], ['', strip(sign(twr, pct))],
-    ['Anualizada', sign(ann, pct)], ['Volatilidad anual', pct(vol)], ['Rent. / volatilidad', (ann / vol).toFixed(2).replace('.', ',')],
-    [null, 'MESES'],
-    ['Mejor', `${sign(bm.ret, pct)} <span class="dim">${mlabel(bm.d)}</span>`],
-    ['Peor', `${sign(wm.ret, pct)} <span class="dim">${mlabel(wm.d)}</span>`],
-    ['En positivo', `${months.filter(m => m.ret > 0).length} de ${months.length}`],
-    [null, 'SEMANAS'],
-    ['Mejor', `${sign(bw.r, pct)} <span class="dim">${dstr(bw.d)}</span>`],
-    ['Peor', `${sign(ww.r, pct)} <span class="dim">${dstr(ww.d)}</span>`],
-    ['En positivo', `${wk.filter(p => p.r > 0).length} de ${wk.length}`],
-    [null, 'CAÍDAS'],
-    ['Desde máximos', sign(dd.at(-1), pct)],
-    ['Máxima', `${sign(maxDD.v, pct)} <span class="dim">${dstr(maxDD.d)}</span>`],
+  stats('statRend', [
+    [`Rentabilidad desde ${mlabel(w[0].d)}`, `<span class="${cls(twr)}">${pp(twr)}</span>`],
+    ['Anualizada', `<span class="${cls(ann)}">${pp(ann)}</span>`],
+    ['Volatilidad anual', pct(vol)],
+    ['Máxima caída', `<span class="dn">${pp(maxDD.v)}</span>`, `<span class="dim">${dstr(maxDD.d)}</span>`],
   ]);
   tabs('periods', [['TODO', 'all'], ['1A', '1y'], ['AÑO', 'ytd'], ['3M', '3m']], period, v => { period = v; drawReturns() });
   drawReturns();
-  const curM = monthKey(now);
+  const curM = monthKey(now), noY = {y: {display: false}};
   chart('chMonth', {type: 'bar', data: {labels: months.map(m => mlabel(m.d) + (m.k === curM ? '*' : '')), datasets: [{data: months.map(m => m.ret), backgroundColor: months.map(m => m.ret >= 0 ? C.up : C.dn)}]},
-    options: base(pct, {x: {ticks: {maxRotation: 0, autoSkip: true, maxTicksLimit: 12}}})});
-  chart('chDD', {type: 'line', data: {labels: w.map(p => dstr(p.d)), datasets: [area(dd, C.dn)]}, options: base(pct, {y: {max: 0, ticks: {callback: pct, maxTicksLimit: 4}}})});
+    options: base(pct, {x: {ticks: {maxRotation: 0, autoSkip: true, maxTicksLimit: 7}, grid: {display: false}}, ...noY})});
+  chart('chDD', {type: 'line', data: {labels: w.map(p => dstr(p.d)), datasets: [area(dd, C.dn)]}, options: base(pct, {x: {ticks: {maxTicksLimit: 10, maxRotation: 0}, grid: {display: false}}, ...noY})});
 
   // ===== 3 · POSICIONES =====
-  const maxW = Math.max(...all.map(p => p.weight));
-  $('pos').innerHTML = '<thead><tr><th>Activo</th><th>Peso</th><th>Invertido</th><th>Valor</th><th>P&L €</th><th>P&L %</th></tr></thead>' +
-    x.blocks.map(b => {
-      const bp = b.pos.reduce((s, p) => s + (p.pnl || 0), 0), bc = b.pos.reduce((s, p) => s + (p.cost || 0), 0);
-      return `<tbody><tr class="blk"><td><button type="button" aria-expanded="true">▾ ${b.name} (${b.pos.length})</button></td><td>${pct(b.weight)}</td><td>${eur(bc)}</td><td>${eur(b.value)}</td><td>${sign(bp, eur)}</td><td>${sign(bp / bc, pct)}</td></tr>` +
-        [...b.pos].sort((p, q) => q.weight - p.weight).map(p => `<tr><td title="${p.name}">${p.name}</td><td><span class="wbar"><i style="width:${(p.weight / maxW * 100).toFixed(0)}%"></i></span>${pct(p.weight)}</td><td>${eur(p.cost)}</td><td>${eur(p.value)}</td><td>${sign(p.pnl, eur)}</td><td>${sign(p.ret, pct)}</td></tr>`).join('') + '</tbody>';
-    }).join('');
-  $('pos').onclick = e => {
-    const btn = e.target.closest('tr.blk button'); if (!btn) return;
-    const open = btn.getAttribute('aria-expanded') !== 'true';
-    btn.setAttribute('aria-expanded', open);
-    btn.textContent = (open ? '▾' : '▸') + btn.textContent.slice(1);
-    btn.closest('tbody').querySelectorAll('tr:not(.blk)').forEach(r => r.hidden = !open);
-  };
+  chart('chMap', {
+    type: 'treemap',
+    data: {datasets: [{tree: all, key: 'value', borderWidth: 1, borderColor: '#040404', spacing: 1,
+      backgroundColor: c => c.type === 'data' ? pnlColor(c.raw._data.ret) : 'transparent',
+      labels: {display: true, align: 'left', position: 'top', color: '#fff', font: [{size: 11, weight: 600}, {size: 11}],
+        formatter: c => [c.raw._data.name, `${pp(c.raw._data.ret)} · ${pct(c.raw._data.weight).replace(/,\d+/, '')}`]}}]},
+    options: {maintainAspectRatio: false, animation: false, plugins: {legend: {display: false},
+      tooltip: {callbacks: {title: c => c[0].raw._data.name, label: c => `Peso ${pct(c.raw._data.weight)} · P&L ${pp(c.raw._data.ret)} (${eur(c.raw._data.pnl)})`}}}},
+  });
   const byRet = [...all].sort((a, b) => b.ret - a.ret), short = s => s.length > 16 ? s.slice(0, 15) + '…' : s;
   chart('chPnl', {type: 'bar',
     data: {labels: byRet.map(p => short(p.name)), datasets: [{data: byRet.map(p => p.ret), backgroundColor: byRet.map(p => p.ret >= 0 ? C.up : C.dn)}]},
@@ -429,19 +389,12 @@ function render(x, tx) {
   const keys = [...flowM.keys()].sort((a, b) => a - b), kl = k => mlabel(new Date(Math.floor(k / 12), k % 12, 1));
   let acc = 0;
   const net = keys.map(k => flowM.get(k)), cum = net.map(v => acc += v);
+  $('tFlow').textContent = `Aportaciones netas por mes · total ${eur(acc)}`;
   chart('chFlow', {data: {labels: keys.map(kl), datasets: [
       {type: 'bar', label: 'Neto del mes', data: net, backgroundColor: net.map(v => v >= 0 ? C.amber : C.dn), yAxisID: 'y'},
       {type: 'line', label: 'Acumulado', data: cum, borderColor: C.txt, pointRadius: 0, borderWidth: 1.2, yAxisID: 'y1'}]},
     options: {...base(eur, {y1: {position: 'right', grid: {display: false}, ticks: {callback: eur, maxTicksLimit: 6}}}),
       plugins: {legend: {display: true, position: 'top', align: 'end', labels: {boxWidth: 8, boxHeight: 8}}, tooltip: {callbacks: {label: c => `${c.dataset.label}: ${eur(c.parsed.y)}`}}}}});
-  const tot = type => tx.filter(t => t.type === type).reduce((s, t) => s + t.net, 0);
-  const months12 = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-  sum('sumFlow', [
-    [null, 'APORTADO NETO'], ['', eur(acc)],
-    ['Últimos 12 meses', eur(tx.filter(t => t.date >= months12 && (t.type === 'Depósito' || t.type === 'Retirada')).reduce((s, t) => s + (t.type === 'Depósito' ? t.net : -t.net), 0))],
-    [null, 'INGRESOS PASIVOS'], ['Intereses', eur(tot('Intereses'))], ['Dividendos', eur(tot('Dividendo'))],
-    [null, 'COSTES'], ['Comisiones', eur(tx.reduce((s, t) => s + t.fees, 0))], ['Impuestos', eur(tx.reduce((s, t) => s + t.taxes, 0))],
-  ]);
 }
 
 // ---------- files + auto refresh ----------
