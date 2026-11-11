@@ -174,6 +174,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
       <article class="panel w2 h4"><div class="pt"><h2>Patrimonio</h2></div><div class="pb"><div class="stats" id="statPat"></div></div></article>
       <article class="panel w4 h2"><div class="pt"><h2>Evolución semanal</h2></div><div class="pb chart"><canvas id="chPat"></canvas></div></article>
       <article class="panel w4 h2"><div class="pt"><h2>Reparto</h2><div class="tabs" id="tabDonut" role="group" aria-label="Reparto por"></div></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dRep"></canvas><span id="cRep"></span></div><ul class="legend" id="lRep"></ul></div></div></article>
+      <article class="panel w6 h2"><div class="pt"><h2>Patrimonio a fin de mes · * en curso</h2></div><div class="pb chart"><canvas id="chPatM"></canvas></div></article>
     </div>
   </section>
 
@@ -351,30 +352,33 @@ function tabs(id, options, current, onPick) {
 
 let model = null, txs = null, period = 'all', donutBy = 'tipo';
 
-/* Position -> [vehicle, region, trading currency]. A new position shows as "Sin clasificar" until you add it here. */
+/* Position -> [vehicle, region, trading currency, short label: ticker for stocks, short name for funds].
+   A new position shows as "Sin clasificar" (and its first word as label) until you add it here. */
 const CLASIF = {
-  'neuberger berman short duration euro bond fund': ['Renta fija', 'Europa', 'EUR'],
-  'roboadvisor': ['Indexado', 'Global', 'EUR'],
-  'fidelity msci world': ['Indexado', 'Global', 'EUR'],
-  'myinvestor value': ['Fondo activo', 'Global', 'EUR'],
-  'cobas international': ['Fondo activo', 'Global', 'EUR'],
-  'robeco smart energy': ['Fondo activo', 'Global', 'EUR'],
-  'msci em': ['ETF', 'Emergentes', 'EUR'],
-  'msci china': ['ETF', 'Emergentes', 'EUR'],
-  'iren ltd': ['Acción', 'Norteamérica', 'USD'],
-  'uber technologies inc': ['Acción', 'Norteamérica', 'USD'],
-  'lithium americas corp': ['Acción', 'Norteamérica', 'USD'],
-  'brookfield corp': ['Acción', 'Norteamérica', 'USD'],
-  'netflix inc': ['Acción', 'Norteamérica', 'USD'],
-  'amper sa': ['Acción', 'España', 'EUR'],
-  'nueva expresion textil sa': ['Acción', 'España', 'EUR'],
+  'neuberger berman short duration euro bond fund': ['Renta fija', 'Europa', 'EUR', 'Neuberger'],
+  'roboadvisor': ['Indexado', 'Global', 'EUR', 'Robo'],
+  'fidelity msci world': ['Indexado', 'Global', 'EUR', 'MSCI World'],
+  'myinvestor value': ['Fondo activo', 'Global', 'EUR', 'MyI Value'],
+  'cobas international': ['Fondo activo', 'Global', 'EUR', 'Cobas'],
+  'robeco smart energy': ['Fondo activo', 'Global', 'EUR', 'Robeco'],
+  'msci em': ['ETF', 'Emergentes', 'EUR', 'MSCI EM'],
+  'msci china': ['ETF', 'Emergentes', 'EUR', 'MSCI China'],
+  'iren ltd': ['Acción', 'Norteamérica', 'USD', 'IREN'],
+  'uber technologies inc': ['Acción', 'Norteamérica', 'USD', 'UBER'],
+  'lithium americas corp': ['Acción', 'Norteamérica', 'USD', 'LAC'],
+  'brookfield corp': ['Acción', 'Norteamérica', 'USD', 'BN'],
+  'netflix inc': ['Acción', 'Norteamérica', 'USD', 'NFLX'],
+  'amper sa': ['Acción', 'España', 'EUR', 'AMP'],
+  'nueva expresion textil sa': ['Acción', 'España', 'EUR', 'NXT'],
 };
 const clasif = (p, i) => (CLASIF[p.name.toLowerCase().trim()] || [])[i] || 'Sin clasificar';
+const ticker = p => (CLASIF[p.name.toLowerCase().trim()] || [])[3] || p.name.split(' ')[0];
 const group = (pos, i) => { const m = new Map(); for (const p of pos) m.set(clasif(p, i), (m.get(clasif(p, i)) || 0) + p.value); return [...m] };
 
-// thin segmented ring in the brand's slate / sand / green tones (never mixed with primary blue); center = largest slice unless given
-function ring(key, items, center) {
-  const total = items.reduce((s, [, v]) => s + v, 0), sorted = [...items].sort((a, b) => b[1] - a[1]);
+// thin segmented ring in the brand's slate / sand / green tones (never mixed with primary blue), largest slice first.
+// center: [value, label], or false for an empty middle (default: the largest slice); last: an item pinned to the end ("Resto")
+function ring(key, items, {center, last} = {}) {
+  const sorted = [...items].sort((a, b) => b[1] - a[1]).concat(last ? [last] : []), total = sorted.reduce((s, [, v]) => s + v, 0);
   chart('d' + key, {
     type: 'doughnut',
     data: {labels: sorted.map(i => i[0]), datasets: [{data: sorted.map(i => i[1]), backgroundColor: TONES, borderWidth: 0, spacing: 2, borderRadius: 2}]},
@@ -382,7 +386,7 @@ function ring(key, items, center) {
       tooltip: {callbacks: {label: c => `${c.label}: ${eur(c.parsed)} (${pct(c.parsed / total)})`}}}},
   });
   const [n0, v0] = sorted[0], [cv, cl] = center || [v0 / total, n0];
-  $('c' + key).innerHTML = `<b>${pct(cv).replace(/,\d+/, '')}</b><small>${cl}</small>`;
+  $('c' + key).innerHTML = center === false ? '' : `<b>${pct(cv).replace(/,\d+/, '')}</b><small>${cl}</small>`;
   $('l' + key).innerHTML = sorted.map(([n, v], i) => `<li style="--c:${TONES[i]}"><span class="nm" title="${n}">${n}</span><span>${pct(v / total).replace(/,\d+/, '')}</span></li>`).join('');
 }
 
@@ -418,6 +422,25 @@ function render(x, tx) {
     ['P&L latente', `<span class="${cls(pnl)}">${ppEur(pnl)}</span>`, `<span class="${cls(pnl)}">${pp(pnl / cost)}</span> <span class="dim">sobre lo invertido</span>`],
   ]);
   chart('chPat', {type: 'line', data: {labels: pat.map(p => dstr(p.d)), datasets: [area(pat.map(p => p.v), C.blue)]}, options: base(eur)});
+  // month-end net worth = last weekly value of each month, as the PATRIMONIO MENSUAL chart of the Excel
+  const pm = [];
+  for (const p of pat) { const k = monthKey(p.d); if (pm.at(-1)?.k === k) pm.at(-1).v = p.v; else pm.push({k, d: p.d, v: p.v}) }
+  const nowK = monthKey(now), kEur = v => HIDE ? '' : (v / 1000).toLocaleString('es-ES', {maximumFractionDigits: 1}) + 'k';
+  chart('chPatM', {type: 'bar',
+    data: {labels: pm.map(m => mlabel(m.d) + (m.k === nowK ? '*' : '')), datasets: [{data: pm.map(m => m.v), borderRadius: 4, maxBarThickness: 44,
+      backgroundColor: pm.map(m => m.k === nowK ? C.blue + '66' : C.blue)}]},
+    options: {...base(eur, {y: {display: false, beginAtZero: true, grace: '8%'}}),
+      layout: {padding: {top: 18}},
+      plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => {
+        const i = c.dataIndex, d = i ? pm[i].v - pm[i - 1].v : null;
+        return [eur(pm[i].v), ...(d == null ? [] : [`${d >= 0 ? '+' : ''}${eur(d)} vs mes anterior`])];
+      }}}}},
+    // value label above each bar (skipped while euros are hidden)
+    plugins: [{id: 'barLabels', afterDatasetsDraw: ch => {
+      const {ctx} = ch; ctx.save(); ctx.fillStyle = C.ink; ctx.font = '600 11px Inter, sans-serif'; ctx.textAlign = 'center';
+      ch.getDatasetMeta(0).data.forEach((b, i) => ctx.fillText(kEur(pm[i].v), b.x, b.y - 6));
+      ctx.restore();
+    }}]});
   tabs('tabDonut', [['Tipo', 'tipo'], ['Bróker', 'broker']], donutBy, v => { donutBy = v; drawDonut() });
   drawDonut();
 
@@ -453,7 +476,9 @@ function render(x, tx) {
     data: {datasets: [{tree: all, key: 'value', borderWidth: 0, borderRadius: 6, spacing: 2,
       backgroundColor: c => c.type === 'data' ? pnlColor(c.raw._data.ret) : 'transparent',
       labels: {display: true, align: 'left', position: 'top', color: C.ink, font: [{size: 12, weight: 600}, {size: 11}],
-        formatter: c => [c.raw._data.name, `${pp(c.raw._data.ret)} · ${pct(c.raw._data.weight).replace(/,\d+/, '')}`]}}]},
+        overflow: 'hidden', // a tile too small for its label shows no label (the tooltip still has it)
+        // narrow tiles show just the ticker; wide ones add P&L and weight
+        formatter: c => c.raw.w < 96 || c.raw.h < 40 ? ticker(c.raw._data) : [ticker(c.raw._data), `${pp(c.raw._data.ret)} · ${pct(c.raw._data.weight).replace(/,\d+/, '')}`]}}]},
     options: {maintainAspectRatio: false, animation: false, plugins: {legend: {display: false},
       tooltip: {callbacks: {title: c => c[0].raw._data.name, label: c => `Peso ${pct(c.raw._data.weight)} · P&L ${pp(c.raw._data.ret)} (${eur(c.raw._data.pnl)})`}}}},
   });
@@ -466,12 +491,12 @@ function render(x, tx) {
   // ===== 4 · FLUJOS Y DIVERSIFICACIÓN =====
   const byVal = [...all].sort((a, b) => b.value - a.value), top5 = byVal.slice(0, 5), rest = byVal.slice(5).reduce((s, p) => s + p.value, 0);
   const invTotal = all.reduce((s, p) => s + p.value, 0);
-  ring('Top', [...top5.map(p => [p.name, p.value]), ...(rest ? [['Resto (' + (byVal.length - 5) + ')', rest]] : [])], [top5.reduce((s, p) => s + p.value, 0) / invTotal, 'Top 5']);
-  ring('Veh', group(all, 0));
-  ring('Zona', group(all, 1));
+  ring('Top', top5.map(p => [p.name, p.value]), {center: false, last: rest ? [`Resto (${byVal.length - 5})`, rest] : null});
+  ring('Veh', group(all, 0), {center: false});
+  ring('Zona', group(all, 1), {center: false});
   const div = new Map(group(all, 2));
   div.set('EUR', (div.get('EUR') || 0) + x.cash); // cash is in euros
-  ring('Div', [...div]);
+  ring('Div', [...div], {center: false});
 
   document.querySelectorAll('#scr-flu .flow').forEach(el => el.hidden = !tx);
   if (!tx) return;
