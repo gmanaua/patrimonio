@@ -126,6 +126,39 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .legend li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
 .legend .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
 .legend li > span:last-child{font-weight:500}
+.legend.logos li{grid-template-columns:22px minmax(0,1fr) auto;margin:4px 0}
+.legend.logos li::before{display:none}
+.legend.logos li > i{width:8px;height:8px;border-radius:50%;background:var(--c);justify-self:center}
+
+/* entity lists after the brand book: logo badge + name, quiet columns, status pill */
+.lg{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;flex:none;background:var(--lgc);color:#111;font:700 11px/1 "Inter Tight",Inter,sans-serif;letter-spacing:.02em}
+.lg.broker{background:var(--blue);color:#fff}
+.lg.sm{width:22px;height:22px;border-radius:6px;font-size:9px}
+.lg.img{background:#fff;border:1px solid var(--line);padding:3px;overflow:hidden}
+.lg.img.sm{padding:2px;border:0}
+.lg img{width:100%;height:100%;object-fit:contain;border-radius:4px;display:block}
+.ent{display:flex;align-items:center;gap:10px;min-width:0}
+.ent > span{display:grid;min-width:0;line-height:1.3}
+.ent b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ent small{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{color:var(--muted);font-weight:500;font-size:12px;text-align:left;padding:4px 10px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;color:var(--muted)}
+.tbl td:first-child{color:var(--ink);max-width:320px;min-width:190px}
+.tbl tr:last-child td{border-bottom:0}
+.tbl .r{text-align:right}
+.tbl td.v{color:var(--ink);font-weight:500}
+.tbl td.wrap{white-space:normal;color:var(--ink)}
+.tbl td.note{white-space:normal;font-size:12px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.ok{color:var(--up);background:color-mix(in srgb,var(--up-fill) 16%,transparent)}
+.pill.ko{color:var(--dn);background:color-mix(in srgb,var(--dn-fill) 14%,transparent)}
+.pill.wait{color:var(--muted);background:color-mix(in srgb,var(--faint) 20%,transparent)}
+.pill.now{color:var(--blue-d);background:color-mix(in srgb,var(--blue) 12%,transparent)}
+.panel.free{margin-top:16px}
+.panel.free .pb{padding:8px 8px 10px}
+@media (max-width:860px){.tbl .hm{display:none}}
 
 /* lock */
 #lock{display:grid;place-items:center;padding:96px 16px}
@@ -154,6 +187,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
     <a href="#rendimiento" data-view="rendimiento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 17l5.5-5.5 4 4L20.5 8"/><path d="M15 8h5.5v5.5"/></svg>Rendimiento</a>
     <a href="#posiciones" data-view="posiciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M12 3.5v17M12 12h8.5"/></svg>Posiciones</a>
     <a href="#flujos" data-view="flujos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12z"/><path d="M15 3.8A8.5 8.5 0 0 1 20.2 9H15z"/></svg>Flujos y diversificación</a>
+    <a href="#plan" data-view="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6.5h11M9 12h11M9 17.5h11"/><path d="M3.5 6.5l1.5 1.5 2.5-3"/><path d="M3.5 12l1.5 1.5 2.5-3"/><circle cx="5" cy="17.5" r="1.2"/></svg>Plan</a>
   </nav>
 </aside>
 <div class="content">
@@ -173,8 +207,9 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
     <div class="tiles">
       <article class="panel w2 h4"><div class="pt"><h2>Patrimonio</h2></div><div class="pb"><div class="stats" id="statPat"></div></div></article>
       <article class="panel w4 h2"><div class="pt"><h2>Evolución semanal</h2></div><div class="pb chart"><canvas id="chPat"></canvas></div></article>
-      <article class="panel w4 h2"><div class="pt"><h2>Reparto</h2><div class="tabs" id="tabDonut" role="group" aria-label="Reparto por"></div></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dRep"></canvas><span id="cRep"></span></div><ul class="legend" id="lRep"></ul></div></div></article>
+      <article class="panel w4 h2"><div class="pt"><h2>Reparto por tipo</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dRep"></canvas><span id="cRep"></span></div><ul class="legend" id="lRep"></ul></div></div></article>
       <article class="panel w6 h2"><div class="pt"><h2>Patrimonio a fin de mes · * en curso</h2></div><div class="pb chart"><canvas id="chPatM"></canvas></div></article>
+      <article class="panel w6 h2"><div class="pt"><h2>Brókers</h2></div><div class="pb"><table class="tbl" id="tbBrk"></table></div></article>
     </div>
   </section>
 
@@ -190,18 +225,22 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
   <section class="screen" id="scr-pos" aria-label="Posiciones">
     <div class="tiles">
       <article class="panel w6 h4"><div class="pt"><h2>Posiciones · tamaño = peso, color = P&amp;L</h2></div><div class="pb chart"><canvas id="chMap"></canvas></div></article>
-      <article class="panel w6 h2"><div class="pt"><h2>P&amp;L % por posición</h2></div><div class="pb chart"><canvas id="chPnl"></canvas></div></article>
     </div>
+    <article class="panel free"><div class="pt"><h2>Detalle de posiciones</h2></div><div class="pb"><table class="tbl" id="tbPos"></table></div></article>
   </section>
 
   <section class="screen" id="scr-flu" aria-label="Flujos y diversificación">
     <div class="tiles">
       <article class="panel w6 h2 flow"><div class="pt"><h2 id="tFlow">Aportaciones netas por mes</h2></div><div class="pb chart"><canvas id="chFlow"></canvas></div></article>
-      <article class="panel w3 h2"><div class="pt"><h2>Concentración · 5 mayores</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dTop"></canvas><span id="cTop"></span></div><ul class="legend" id="lTop"></ul></div></div></article>
+      <article class="panel w3 h2"><div class="pt"><h2>Concentración · 5 mayores</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dTop"></canvas><span id="cTop"></span></div><ul class="legend logos" id="lTop"></ul></div></div></article>
       <article class="panel w3 h2"><div class="pt"><h2>Tipo de vehículo</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dVeh"></canvas><span id="cVeh"></span></div><ul class="legend" id="lVeh"></ul></div></div></article>
       <article class="panel w3 h2"><div class="pt"><h2>Zona geográfica</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dZona"></canvas><span id="cZona"></span></div><ul class="legend" id="lZona"></ul></div></div></article>
       <article class="panel w3 h2"><div class="pt"><h2>Divisa · con liquidez</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dDiv"></canvas><span id="cDiv"></span></div><ul class="legend" id="lDiv"></ul></div></div></article>
     </div>
+  </section>
+
+  <section class="screen" id="scr-plan" aria-label="Plan">
+    <article class="panel"><div class="pt"><h2>Plan de la estrategia · noviembre 2026</h2></div><div class="pb"><table class="tbl" id="tbPlan"></table></div></article>
   </section>
 
 </main>
@@ -350,34 +389,57 @@ function tabs(id, options, current, onPick) {
   };
 }
 
-let model = null, txs = null, period = 'all', donutBy = 'tipo';
+let model = null, txs = null, period = 'all', dataTime = null; // dataTime: when sync.js last uploaded the data
 
-/* Position -> [vehicle, region, trading currency, short label: ticker for stocks, short name for funds].
+/* Position -> [vehicle, region, trading currency, short label (ticker for stocks, short name for funds), broker].
    A new position shows as "Sin clasificar" (and its first word as label) until you add it here. */
 const CLASIF = {
-  'neuberger berman short duration euro bond fund': ['Renta fija', 'Europa', 'EUR', 'Neuberger'],
-  'roboadvisor': ['Indexado', 'Global', 'EUR', 'Robo'],
-  'fidelity msci world': ['Indexado', 'Global', 'EUR', 'MSCI World'],
-  'myinvestor value': ['Fondo activo', 'Global', 'EUR', 'MyI Value'],
-  'cobas international': ['Fondo activo', 'Global', 'EUR', 'Cobas'],
-  'robeco smart energy': ['Fondo activo', 'Global', 'EUR', 'Robeco'],
-  'msci em': ['ETF', 'Emergentes', 'EUR', 'MSCI EM'],
-  'msci china': ['ETF', 'Emergentes', 'EUR', 'MSCI China'],
-  'iren ltd': ['Acción', 'Norteamérica', 'USD', 'IREN'],
-  'uber technologies inc': ['Acción', 'Norteamérica', 'USD', 'UBER'],
-  'lithium americas corp': ['Acción', 'Norteamérica', 'USD', 'LAC'],
-  'brookfield corp': ['Acción', 'Norteamérica', 'USD', 'BN'],
-  'netflix inc': ['Acción', 'Norteamérica', 'USD', 'NFLX'],
-  'amper sa': ['Acción', 'España', 'EUR', 'AMP'],
-  'nueva expresion textil sa': ['Acción', 'España', 'EUR', 'NXT'],
+  'neuberger berman short duration euro bond fund': ['Renta fija', 'Europa', 'EUR', 'Neuberger', 'MyInvestor'],
+  'roboadvisor': ['Indexado', 'Global', 'EUR', 'Robo', 'MyInvestor'],
+  'fidelity msci world': ['Indexado', 'Global', 'EUR', 'MSCI World', 'MyInvestor'],
+  'myinvestor value': ['Fondo activo', 'Global', 'EUR', 'MyI Value', 'MyInvestor'],
+  'cobas international': ['Fondo activo', 'Global', 'EUR', 'Cobas', 'MyInvestor'],
+  'robeco smart energy': ['Fondo activo', 'Global', 'EUR', 'Robeco', 'MyInvestor'],
+  'msci em': ['ETF', 'Emergentes', 'EUR', 'MSCI EM', 'Trade Republic'],
+  'msci china': ['ETF', 'Emergentes', 'EUR', 'MSCI China', 'Trade Republic'],
+  'iren ltd': ['Acción', 'Norteamérica', 'USD', 'IREN', 'IBKR'],
+  'uber technologies inc': ['Acción', 'Norteamérica', 'USD', 'UBER', 'IBKR'],
+  'lithium americas corp': ['Acción', 'Norteamérica', 'USD', 'LAC', 'IBKR'],
+  'brookfield corp': ['Acción', 'Norteamérica', 'USD', 'BN', 'IBKR'],
+  'netflix inc': ['Acción', 'Norteamérica', 'USD', 'NFLX', 'IBKR'],
+  'amper sa': ['Acción', 'España', 'EUR', 'AMP', 'Trade Republic'],
+  'nueva expresion textil sa': ['Acción', 'España', 'EUR', 'NXT', 'IBKR'],
 };
+
+// real logos, stored in logos/ (downloaded once from each company's site or Google's icon service; nothing is
+// fetched from third parties at runtime). Keyed by short label or broker name; anything missing falls back to initials.
+const LOGOS = {
+  'Robo': 'myinvestor.png', 'MyI Value': 'myinvestor.png', 'MSCI World': 'fidelity.png', 'Cobas': 'cobas.png',
+  'Neuberger': 'neuberger.png', 'Robeco': 'robeco.png', 'MSCI EM': 'ishares.png', 'MSCI China': 'ishares.png',
+  'IREN': 'iren.svg', 'UBER': 'uber.png', 'LAC': 'lithiumamericas.ico', 'BN': 'brookfield.png', 'NFLX': 'netflix.png',
+  'AMP': 'amper.png', 'NXT': 'nextil.jpg',
+  'Trade Republic': 'traderepublic.png', 'MyInvestor': 'myinvestor.png', 'IBKR': 'ibkr.png',
+};
+
+// "logo" badge: two-letter monogram on a soft tertiary tone (brokers on brand blue). No external logos:
+// loading them from a third party would tell it which companies you hold.
+const LG_TONES = ['#DFE2EB', '#D8D3C5', '#D1E6D4', '#AFD3BA', '#C9CDD8', '#E6E1D6'];
+const mono = s => { const w = s.replace(/[^\p{L}\p{N} ]/gu, '').trim().split(/\s+/); return (w.length > 1 ? w[0][0] + w[1][0] : w[0].slice(0, 2)).toUpperCase() };
+const tone = s => LG_TONES[[...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % LG_TONES.length];
+// color: optional fill (e.g. the donut slice it stands for), with white text when the fill is dark
+const isDarkHex = h => { const n = parseInt(h.slice(1, 7), 16); return ((n >> 16) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000 < 150 };
+// a real logo sits on a white tile; with color (legend use) it gets a ring in that color so it still keys the donut slice
+const badge = (label, {broker, sm, color} = {}) => LOGOS[label]
+  ? `<span class="lg img${sm ? ' sm' : ''}"${color ? ` style="box-shadow:0 0 0 2px ${color}"` : ''} aria-hidden="true"><img src="logos/${LOGOS[label]}" alt="" loading="lazy"></span>`
+  : `<span class="lg${broker ? ' broker' : ''}${sm ? ' sm' : ''}" style="--lgc:${color || tone(label)}${color && isDarkHex(color) ? ';color:#fff' : ''}" aria-hidden="true">${mono(label)}</span>`;
+const ent = (label, title, sub) => `<div class="ent">${badge(label)}<span><b title="${title}">${title}</b>${sub ? `<small>${sub}</small>` : ''}</span></div>`;
 const clasif = (p, i) => (CLASIF[p.name.toLowerCase().trim()] || [])[i] || 'Sin clasificar';
 const ticker = p => (CLASIF[p.name.toLowerCase().trim()] || [])[3] || p.name.split(' ')[0];
 const group = (pos, i) => { const m = new Map(); for (const p of pos) m.set(clasif(p, i), (m.get(clasif(p, i)) || 0) + p.value); return [...m] };
 
 // thin segmented ring in the brand's slate / sand / green tones (never mixed with primary blue), largest slice first.
 // center: [value, label], or false for an empty middle (default: the largest slice); last: an item pinned to the end ("Resto")
-function ring(key, items, {center, last} = {}) {
+function ring(key, items, {center, last, logos} = {}) {
   const sorted = [...items].sort((a, b) => b[1] - a[1]).concat(last ? [last] : []), total = sorted.reduce((s, [, v]) => s + v, 0);
   chart('d' + key, {
     type: 'doughnut',
@@ -387,11 +449,33 @@ function ring(key, items, {center, last} = {}) {
   });
   const [n0, v0] = sorted[0], [cv, cl] = center || [v0 / total, n0];
   $('c' + key).innerHTML = center === false ? '' : `<b>${pct(cv).replace(/,\d+/, '')}</b><small>${cl}</small>`;
-  $('l' + key).innerHTML = sorted.map(([n, v], i) => `<li style="--c:${TONES[i]}"><span class="nm" title="${n}">${n}</span><span>${pct(v / total).replace(/,\d+/, '')}</span></li>`).join('');
+  // with logos, each named item gets its badge and the pinned "Resto" keeps a plain dot in its slice color
+  const mark = (n, i) => !logos ? '' : last && i === sorted.length - 1 ? '<i></i>' : badge(ticker({name: n}), {sm: true, color: TONES[i]});
+  $('l' + key).innerHTML = sorted.map(([n, v], i) => `<li style="--c:${TONES[i]}">${mark(n, i)}<span class="nm" title="${n}">${n}</span><span>${pct(v / total).replace(/,\d+/, '')}</span></li>`).join('');
+}
+
+/* Strategy agreed on 9 Nov 2026. Steps only, no amounts: this file is public, the euros stay in the encrypted data.
+   Mark a step as done with hecho: true. Status otherwise comes from its date. */
+const PLAN = [
+  {fecha: '2026-11-09', cuando: '9 nov 2026', paso: 'Traspaso de la 1.ª mitad del Neuberger al Fidelity MSCI World', nota: 'Ejecución prevista el 15 nov', hecho: true},
+  {fecha: '2026-11-30', cuando: 'Finales de nov 2026', paso: '1.ª compra de oro', nota: 'Invesco Physical Gold (8PSG, Xetra) en IBKR'},
+  {fecha: '2026-12-18', cuando: 'Mediados de dic 2026', paso: '2.ª mitad del Neuberger y liquidez al núcleo · 2.ª compra de oro', nota: 'Después de las reuniones de la Fed y el BCE'},
+  {fecha: '2027-01-31', cuando: 'Enero 2027', paso: '3.ª compra de oro y resto de la liquidez al núcleo', nota: 'La mitad de la liquidez se queda en la cuenta remunerada'},
+  {fecha: '2027-06-30', cuando: 'Junio 2027', paso: 'Revisión semestral de la cartera', nota: 'Pesos objetivo: núcleo 50 %, activa 22,5 %, emergentes 10 %, acciones 10 %, oro 7,5 %'},
+];
+function drawPlan(now) {
+  const status = s => {
+    if (s.hecho) return '<span class="pill ok">Hecho</span>';
+    const d = new Date(s.fecha + 'T23:59:59');
+    if (monthKey(d) === monthKey(now)) return '<span class="pill now">Este mes</span>';
+    return d < now ? '<span class="pill ko">Atrasado</span>' : '<span class="pill wait">Pendiente</span>';
+  };
+  $('tbPlan').innerHTML = `<tr><th>Cuándo</th><th>Paso</th><th class="hm">Detalle</th><th class="r">Estado</th></tr>` +
+    PLAN.map(s => `<tr><td>${s.cuando}</td><td class="wrap">${s.paso}</td><td class="hm note">${s.nota || ''}</td><td class="r">${status(s)}</td></tr>`).join('');
 }
 
 function drawDonut() {
-  ring('Rep', {tipo: model.mix, broker: model.brokers}[donutBy]);
+  ring('Rep', model.mix);
 }
 
 function drawReturns() {
@@ -426,10 +510,13 @@ function render(x, tx) {
   const pm = [];
   for (const p of pat) { const k = monthKey(p.d); if (pm.at(-1)?.k === k) pm.at(-1).v = p.v; else pm.push({k, d: p.d, v: p.v}) }
   const nowK = monthKey(now), kEur = v => HIDE ? '' : (v / 1000).toLocaleString('es-ES', {maximumFractionDigits: 1}) + 'k';
+  const pmLo = Math.min(...pm.map(m => m.v)), pmHi = Math.max(...pm.map(m => m.v)), pmR = Math.max(pmHi - pmLo, 500);
+  const yLo = Math.max(0, Math.floor((pmLo - pmR * 0.15) / 500) * 500), yHi = Math.ceil((pmHi + pmR * 0.12) / 500) * 500;
   chart('chPatM', {type: 'bar',
     data: {labels: pm.map(m => mlabel(m.d) + (m.k === nowK ? '*' : '')), datasets: [{data: pm.map(m => m.v), borderRadius: 4, maxBarThickness: 44,
       backgroundColor: pm.map(m => m.k === nowK ? C.blue + '66' : C.blue)}]},
-    options: {...base(eur, {y: {display: false, beginAtZero: true, grace: '8%'}}),
+    // zoomed y axis: starts just under the lowest month so the month-to-month changes are visible; the axis stays shown so the cut is explicit
+    options: {...base(eur, {y: {min: yLo, max: yHi, border: {display: false}, ticks: {maxTicksLimit: 5, callback: v => HIDE ? '' : kEur(v)}}}),
       layout: {padding: {top: 18}},
       plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => {
         const i = c.dataIndex, d = i ? pm[i].v - pm[i - 1].v : null;
@@ -441,8 +528,16 @@ function render(x, tx) {
       ch.getDatasetMeta(0).data.forEach((b, i) => ctx.fillText(kEur(pm[i].v), b.x, b.y - 6));
       ctx.restore();
     }}]});
-  tabs('tabDonut', [['Tipo', 'tipo'], ['Bróker', 'broker']], donutBy, v => { donutBy = v; drawDonut() });
   drawDonut();
+
+  // brokers, in the brand book's connected-entities style: balance, share and how fresh the synced data is
+  const brkTotal = x.brokers.reduce((s, [, v]) => s + v, 0), age = dataTime ? (now - dataTime) / 36e5 : null;
+  const fresh = age == null ? '<span class="pill wait">Sin fecha</span>'
+    : age < 24 ? `<span class="pill ok">Sincronizado · ${dataTime.toLocaleString('es-ES', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'})}</span>`
+    : `<span class="pill wait">Hace ${Math.round(age / 24)} días</span>`;
+  $('tbBrk').innerHTML = `<tr><th>Bróker</th><th class="r">Saldo</th><th class="r hm">Peso</th><th class="r">Estado</th></tr>` +
+    x.brokers.map(([n, v]) => `<tr><td><div class="ent">${badge(n, {broker: true})}<span><b>${n}</b><small>${all.filter(p => clasif(p, 4) === n).length} posiciones</small></span></div></td>
+      <td class="r v">${eur(v)}</td><td class="r hm">${pct(v / brkTotal).replace(/,\d+/, '')}</td><td class="r">${fresh}</td></tr>`).join('');
 
   // ===== 2 · RENDIMIENTO =====
   // monthly return = chained weekly returns of that month
@@ -482,21 +577,25 @@ function render(x, tx) {
     options: {maintainAspectRatio: false, animation: false, plugins: {legend: {display: false},
       tooltip: {callbacks: {title: c => c[0].raw._data.name, label: c => `Peso ${pct(c.raw._data.weight)} · P&L ${pp(c.raw._data.ret)} (${eur(c.raw._data.pnl)})`}}}},
   });
-  const byRet = [...all].sort((a, b) => b.ret - a.ret), short = s => s.length > 16 ? s.slice(0, 15) + '…' : s;
-  chart('chPnl', {type: 'bar',
-    data: {labels: byRet.map(p => short(p.name)), datasets: [{data: byRet.map(p => p.ret), backgroundColor: byRet.map(p => p.ret >= 0 ? C.up : C.dn), borderRadius: 3}]},
-    options: {...base(pct, {x: {ticks: {autoSkip: false, maxRotation: 45, minRotation: 45}, grid: {display: false}}}),
-      plugins: {legend: {display: false}, tooltip: {callbacks: {title: c => byRet[c[0].dataIndex].name, label: c => `${pct(c.parsed.y)} · ${eur(byRet[c.dataIndex].pnl)}`}}}}});
+  // position list, largest first: badge + name, ticker · block, broker, type, weight, value, P&L and a gain/loss pill
+  const byVal = [...all].sort((a, b) => b.value - a.value), cap = s => s.charAt(0) + s.slice(1).toLowerCase();
+  $('tbPos').innerHTML = `<tr><th>Posición</th><th class="hm">Bróker</th><th class="hm">Tipo</th><th class="r">Peso</th><th class="r">Valor</th><th class="r hm">P&amp;L</th><th class="r">Rentabilidad</th></tr>` +
+    byVal.map(p => `<tr><td>${ent(ticker(p), p.name, `${ticker(p)} · ${cap(p.block)}`)}</td>
+      <td class="hm">${clasif(p, 4)}</td><td class="hm">${clasif(p, 0)}</td>
+      <td class="r">${pct(p.weight).replace(/,\d+/, '')}</td><td class="r v">${eur(p.value)}</td>
+      <td class="r hm ${cls(p.pnl)}">${ppEur(p.pnl)}</td>
+      <td class="r"><span class="pill ${p.ret >= 0 ? 'ok' : 'ko'}">${pp(p.ret)}</span></td></tr>`).join('');
 
   // ===== 4 · FLUJOS Y DIVERSIFICACIÓN =====
-  const byVal = [...all].sort((a, b) => b.value - a.value), top5 = byVal.slice(0, 5), rest = byVal.slice(5).reduce((s, p) => s + p.value, 0);
-  const invTotal = all.reduce((s, p) => s + p.value, 0);
-  ring('Top', top5.map(p => [p.name, p.value]), {center: false, last: rest ? [`Resto (${byVal.length - 5})`, rest] : null});
+  const top5 = byVal.slice(0, 5), rest = byVal.slice(5).reduce((s, p) => s + p.value, 0);
+  ring('Top', top5.map(p => [p.name, p.value]), {center: false, logos: true, last: rest ? [`Resto (${byVal.length - 5})`, rest] : null});
   ring('Veh', group(all, 0), {center: false});
   ring('Zona', group(all, 1), {center: false});
   const div = new Map(group(all, 2));
   div.set('EUR', (div.get('EUR') || 0) + x.cash); // cash is in euros
   ring('Div', [...div], {center: false});
+
+  drawPlan(now);
 
   document.querySelectorAll('#scr-flu .flow').forEach(el => el.hidden = !tx);
   if (!tx) return;
@@ -571,6 +670,7 @@ async function refresh() {
     try { xl = await decrypt(await get('data/excel.bin', 'arrayBuffer'), password) }
     catch (e) { if (e.name !== 'OperationError') throw e; password = null; pw.set(null); $('lock').hidden = false; $('pwErr').hidden = false; return }
     const csv = st.csv ? decodeText(await decrypt(await get('data/csv.bin', 'arrayBuffer'), password)) : null;
+    dataTime = new Date(st.actualizado);
     await loadData(xl, csv);
     stamp = st.actualizado;
     $('lock').hidden = true;
@@ -616,6 +716,7 @@ const VIEWS = {
   rendimiento: ['scr-rend', 'Rendimiento', 'Rentabilidad, meses y caídas desde máximos'],
   posiciones: ['scr-pos', 'Posiciones', 'Peso y P&L de cada posición'],
   flujos: ['scr-flu', 'Flujos y diversificación', 'Aportaciones y reparto de la cartera'],
+  plan: ['scr-plan', 'Plan', 'Pasos acordados de la estrategia y en qué punto está cada uno'],
 };
 function showView() {
   const key = VIEWS[location.hash.slice(1)] ? location.hash.slice(1) : 'dashboard', [only, title, sub] = VIEWS[key];
