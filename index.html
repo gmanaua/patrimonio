@@ -146,6 +146,11 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .tbl td{padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;color:var(--muted)}
 .tbl td:first-child{color:var(--ink);max-width:320px;min-width:190px}
 .tbl tr:last-child td{border-bottom:0}
+.tbl th button{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:4px;border-radius:4px}
+.tbl th button span{font-size:11px;opacity:.45}
+.tbl th button:hover,.tbl th button.on{color:var(--ink)}
+.tbl th button.on span{opacity:1;color:var(--blue)}
+.tbl th button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .tbl .r{text-align:right}
 .tbl td.v{color:var(--ink);font-weight:500}
 .tbl td.wrap{white-space:normal;color:var(--ink)}
@@ -474,6 +479,45 @@ function drawPlan(now) {
     PLAN.map(s => `<tr><td>${s.cuando}</td><td class="wrap">${s.paso}</td><td class="hm note">${s.nota || ''}</td><td class="r">${status(s)}</td></tr>`).join('');
 }
 
+// ---------- positions table, sortable by any column (click a header; click again to flip). The choice is remembered. ----------
+const POS_COLS = [
+  // [key, header, cell classes, sort value, text column]
+  ['name', 'Posición', '', p => p.name, true],
+  ['broker', 'Bróker', 'hm', p => clasif(p, 4), true],
+  ['tipo', 'Tipo', 'hm', p => clasif(p, 0), true],
+  ['weight', 'Peso', 'r', p => p.weight],
+  ['value', 'Valor', 'r', p => p.value],
+  ['pnl', 'P&amp;L', 'r hm', p => p.pnl],
+  ['ret', 'Rentabilidad', 'r', p => p.ret],
+];
+let posSort = {key: 'value', dir: -1}, posRows = [];
+try { const s = JSON.parse(localStorage.getItem('patrimonio-orden')); if (POS_COLS.some(c => c[0] === s?.key)) posSort = s } catch {}
+function drawPosTable(rows) {
+  if (rows) posRows = rows;
+  const col = POS_COLS.find(c => c[0] === posSort.key), get = col[3], text = col[4];
+  const sorted = [...posRows].sort((a, b) =>
+    (text ? String(get(a)).localeCompare(String(get(b)), 'es', {sensitivity: 'base'}) : (get(a) ?? -Infinity) - (get(b) ?? -Infinity)) * posSort.dir
+    || b.value - a.value);
+  const cap = s => s.charAt(0) + s.slice(1).toLowerCase(), pp = v => strip(sign(v, pct)), ppEur = v => strip(sign(v, eur));
+  const head = POS_COLS.map(([k, h, c]) => {
+    const on = k === posSort.key, arrow = on ? (posSort.dir > 0 ? '↑' : '↓') : '↕';
+    return `<th class="${c}"${on ? ` aria-sort="${posSort.dir > 0 ? 'ascending' : 'descending'}"` : ''}><button type="button" data-k="${k}" class="${on ? 'on' : ''}">${h}<span aria-hidden="true">${arrow}</span></button></th>`;
+  }).join('');
+  $('tbPos').innerHTML = `<tr>${head}</tr>` + sorted.map(p => `<tr><td>${ent(ticker(p), p.name, `${ticker(p)} · ${cap(p.block)}`)}</td>
+      <td class="hm">${clasif(p, 4)}</td><td class="hm">${clasif(p, 0)}</td>
+      <td class="r">${pct(p.weight).replace(/,\d+/, '')}</td><td class="r v">${eur(p.value)}</td>
+      <td class="r hm ${cls(p.pnl)}">${ppEur(p.pnl)}</td>
+      <td class="r"><span class="pill ${p.ret >= 0 ? 'ok' : 'ko'}">${pp(p.ret)}</span></td></tr>`).join('');
+}
+// one listener on the table: text columns start A→Z, numbers start largest first
+$('tbPos').onclick = e => {
+  const b = e.target.closest('th button'); if (!b) return;
+  const k = b.dataset.k, text = POS_COLS.find(c => c[0] === k)[4];
+  posSort = k === posSort.key ? {key: k, dir: -posSort.dir} : {key: k, dir: text ? 1 : -1};
+  try { localStorage.setItem('patrimonio-orden', JSON.stringify(posSort)) } catch {}
+  drawPosTable();
+};
+
 function drawDonut() {
   ring('Rep', model.mix);
 }
@@ -577,14 +621,8 @@ function render(x, tx) {
     options: {maintainAspectRatio: false, animation: false, plugins: {legend: {display: false},
       tooltip: {callbacks: {title: c => c[0].raw._data.name, label: c => `Peso ${pct(c.raw._data.weight)} · P&L ${pp(c.raw._data.ret)} (${eur(c.raw._data.pnl)})`}}}},
   });
-  // position list, largest first: badge + name, ticker · block, broker, type, weight, value, P&L and a gain/loss pill
-  const byVal = [...all].sort((a, b) => b.value - a.value), cap = s => s.charAt(0) + s.slice(1).toLowerCase();
-  $('tbPos').innerHTML = `<tr><th>Posición</th><th class="hm">Bróker</th><th class="hm">Tipo</th><th class="r">Peso</th><th class="r">Valor</th><th class="r hm">P&amp;L</th><th class="r">Rentabilidad</th></tr>` +
-    byVal.map(p => `<tr><td>${ent(ticker(p), p.name, `${ticker(p)} · ${cap(p.block)}`)}</td>
-      <td class="hm">${clasif(p, 4)}</td><td class="hm">${clasif(p, 0)}</td>
-      <td class="r">${pct(p.weight).replace(/,\d+/, '')}</td><td class="r v">${eur(p.value)}</td>
-      <td class="r hm ${cls(p.pnl)}">${ppEur(p.pnl)}</td>
-      <td class="r"><span class="pill ${p.ret >= 0 ? 'ok' : 'ko'}">${pp(p.ret)}</span></td></tr>`).join('');
+  drawPosTable(all);
+  const byVal = [...all].sort((a, b) => b.value - a.value);
 
   // ===== 4 · FLUJOS Y DIVERSIFICACIÓN =====
   const top5 = byVal.slice(0, 5), rest = byVal.slice(5).reduce((s, p) => s + p.value, 0);
