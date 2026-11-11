@@ -9,6 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@2.3.1/dist/chartjs-chart-treemap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-geo@4.3.1/build/index.umd.min.js"></script>
 <style>
 /* palette from the brand book: primary blue / black / white; tertiary slate, sand, blue and green ramps */
 :root{
@@ -87,7 +88,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .screen::before{content:attr(aria-label);display:block;font:700 20px/1.2 "Inter Tight",Inter,sans-serif;margin:0 0 14px 2px}
 .tiles{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:112px;gap:16px}
 .w2{grid-column:span 2}.w3{grid-column:span 3}.w4{grid-column:span 4}.w6{grid-column:span 6}
-.h1{grid-row:span 1}.h2{grid-row:span 2}.h4{grid-row:span 4}
+.h1{grid-row:span 1}.h2{grid-row:span 2}.h3{grid-row:span 3}.h4{grid-row:span 4}
 @media (max-width:1680px){.desk{grid-template-columns:1fr}}
 @media (max-width:860px){
   .top{padding:0 16px;gap:8px}.top .grow{display:none}
@@ -165,6 +166,28 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .pill.ko{color:var(--dn);background:color-mix(in srgb,var(--dn-fill) 14%,transparent)}
 .pill.wait{color:var(--muted);background:color-mix(in srgb,var(--faint) 20%,transparent)}
 .pill.now{color:var(--blue-d);background:color-mix(in srgb,var(--blue) 12%,transparent)}
+/* world map: map + top-countries list */
+.geo{display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:16px;height:100%;align-items:center}
+.geo .map{position:relative;height:100%;min-height:0}
+@media (max-width:640px){.geo{grid-template-columns:1fr;grid-template-rows:1fr auto}.geo .legend{columns:2;column-gap:16px}}
+
+/* compound interest calculator */
+.calc{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:1000px){.calc{grid-template-columns:1fr}}
+.cform{display:grid;gap:18px;padding:4px 0 6px}
+.cform label{display:grid;grid-template-columns:1fr 112px;align-items:center;gap:6px 12px;font-size:13px;color:var(--muted)}
+.cform label > span{grid-column:1}
+.cform input[type=number]{grid-column:2;grid-row:1;width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--card);color:var(--ink);text-align:right;font-feature-settings:"tnum"}
+.cform input[type=number]:focus{border-color:var(--blue);outline:none}
+.cform input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--blue)}
+.cform .reset{justify-self:start}
+.cstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:12px}
+.cstats div{background:var(--bg);border-radius:10px;padding:12px 14px}
+.cstats span{display:block;color:var(--muted);font-size:12px}
+.cstats b{display:block;font:700 22px/1.2 "Inter Tight",Inter,sans-serif;margin-top:4px;white-space:nowrap}
+.cstats div:first-child b{color:var(--blue)}
+@media (max-width:760px){.cstats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cchart{position:relative;height:360px}
 .panel.free{margin-top:16px}
 .panel.free .pb{padding:8px 8px 10px}
 @media (max-width:860px){.tbl .hm{display:none}}
@@ -197,6 +220,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
     <a href="#posiciones" data-view="posiciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M12 3.5v17M12 12h8.5"/></svg>Posiciones</a>
     <a href="#flujos" data-view="flujos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12z"/><path d="M15 3.8A8.5 8.5 0 0 1 20.2 9H15z"/></svg>Flujos y diversificación</a>
     <a href="#plan" data-view="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6.5h11M9 12h11M9 17.5h11"/><path d="M3.5 6.5l1.5 1.5 2.5-3"/><path d="M3.5 12l1.5 1.5 2.5-3"/><circle cx="5" cy="17.5" r="1.2"/></svg>Plan</a>
+    <a href="#calculadora" data-view="calculadora"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M8.5 7.5h7"/><path d="M9 12h.01M12 12h.01M15 12h.01M9 15.5h.01M12 15.5h.01M15 15.5h.01"/></svg>Calculadora</a>
   </nav>
 </aside>
 <div class="content">
@@ -217,7 +241,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
       <article class="panel w2 h4"><div class="pt"><h2>Patrimonio</h2></div><div class="pb"><div class="stats" id="statPat"></div></div></article>
       <article class="panel w4 h2"><div class="pt"><h2>Evolución semanal</h2></div><div class="pb chart"><canvas id="chPat"></canvas></div></article>
       <article class="panel w4 h2"><div class="pt"><h2>Reparto por tipo</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dRep"></canvas><span id="cRep"></span></div><ul class="legend" id="lRep"></ul></div></div></article>
-      <article class="panel w6 h2"><div class="pt"><h2>Patrimonio a fin de mes · * en curso</h2></div><div class="pb chart"><canvas id="chPatM"></canvas></div></article>
+      <article class="panel w6 h3"><div class="pt"><h2>Patrimonio a fin de mes · * en curso</h2></div><div class="pb chart"><canvas id="chPatM"></canvas></div></article>
       <article class="panel w6 h2 detail"><div class="pt"><h2>Brókers</h2></div><div class="pb"><table class="tbl" id="tbBrk"></table></div></article>
     </div>
   </section>
@@ -241,15 +265,22 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
   <section class="screen" id="scr-flu" aria-label="Flujos y diversificación">
     <div class="tiles">
       <article class="panel w6 h2 flow"><div class="pt"><h2 id="tFlow">Aportaciones netas por mes</h2></div><div class="pb chart"><canvas id="chFlow"></canvas></div></article>
-      <article class="panel w3 h2"><div class="pt"><h2>Concentración · 5 mayores</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dTop"></canvas><span id="cTop"></span></div><ul class="legend" id="lTop"></ul></div></div></article>
-      <article class="panel w3 h2"><div class="pt"><h2>Tipo de vehículo</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dVeh"></canvas><span id="cVeh"></span></div><ul class="legend" id="lVeh"></ul></div></div></article>
-      <article class="panel w3 h2"><div class="pt"><h2>Zona geográfica</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dZona"></canvas><span id="cZona"></span></div><ul class="legend" id="lZona"></ul></div></div></article>
-      <article class="panel w3 h2"><div class="pt"><h2>Divisa · con liquidez</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dDiv"></canvas><span id="cDiv"></span></div><ul class="legend" id="lDiv"></ul></div></div></article>
+      <article class="panel w6 h3"><div class="pt"><h2>Exposición por país · aproximada</h2></div><div class="pb"><div class="geo"><div class="map"><canvas id="chGeo"></canvas></div><ul class="legend" id="lGeo"></ul></div></div></article>
+      <article class="panel w2 h2"><div class="pt"><h2>Concentración · 5 mayores</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dTop"></canvas><span id="cTop"></span></div><ul class="legend" id="lTop"></ul></div></div></article>
+      <article class="panel w2 h2"><div class="pt"><h2>Tipo de vehículo</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dVeh"></canvas><span id="cVeh"></span></div><ul class="legend" id="lVeh"></ul></div></div></article>
+      <article class="panel w2 h2"><div class="pt"><h2>Divisa · con liquidez</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dDiv"></canvas><span id="cDiv"></span></div><ul class="legend" id="lDiv"></ul></div></div></article>
     </div>
   </section>
 
   <section class="screen detail" id="scr-plan" aria-label="Plan">
     <article class="panel"><div class="pt"><h2>Plan de la estrategia · noviembre 2026</h2></div><div class="pb"><table class="tbl" id="tbPlan"></table></div></article>
+  </section>
+
+  <section class="screen detail" id="scr-calc" aria-label="Calculadora">
+    <div class="calc">
+      <article class="panel"><div class="pt"><h2>Interés compuesto</h2></div><div class="pb"><form class="cform" id="calcForm" onsubmit="return false"></form></div></article>
+      <article class="panel"><div class="pt"><h2 id="calcTitle">Resultado</h2></div><div class="pb"><div class="cstats" id="calcStats"></div><div class="cchart"><canvas id="chCalc"></canvas></div></div></article>
+    </div>
   </section>
 
 </main>
@@ -353,7 +384,7 @@ const charts = {};
 let C, TONES;
 function theme() {
   const v = n => getComputedStyle(document.documentElement).getPropertyValue('--' + n).trim();
-  C = {blue: v('blue'), up: v('up-fill'), dn: v('dn-fill'), ink: v('ink'), card: v('card')};
+  C = {blue: v('blue'), up: v('up-fill'), dn: v('dn-fill'), ink: v('ink'), card: v('card'), grid: v('grid')};
   TONES = [1, 2, 3, 4, 5, 6, 7, 8].map(i => v('t' + i));
   Chart.defaults.color = v('muted'); Chart.defaults.borderColor = v('grid');
 }
@@ -522,6 +553,108 @@ $('tbPos').onclick = e => {
   drawPosTable();
 };
 
+// ---------- exposure by country (approximate look-through) ----------
+/* How each position spreads across countries. Funds use rounded index / typical weights (MSCI World, MSCI EM,
+   euro short-duration bonds, global value managers), so the map is an estimate, not the funds' exact holdings.
+   Stocks go to where the business is (LAC's mine is in Nevada, IREN's data centers in Texas and Canada).
+   Whatever a profile leaves unassigned counts as "Otros". Keyed by the short label in CLASIF. */
+const W_WORLD = {'United States of America': .715, Japan: .055, 'United Kingdom': .037, Canada: .031, France: .027, Switzerland: .025, Germany: .022, Australia: .017, Netherlands: .012, Sweden: .009, Denmark: .007, Italy: .007, Spain: .007};
+const W_EM = {China: .25, India: .19, Taiwan: .19, 'South Korea': .11, Brazil: .045, 'Saudi Arabia': .04, 'South Africa': .03, Mexico: .02, Indonesia: .015, Thailand: .012, 'United Arab Emirates': .012, Malaysia: .012};
+const W_VALUE = {'United Kingdom': .18, 'United States of America': .15, Spain: .12, Germany: .1, 'South Korea': .08, France: .07, Netherlands: .06, Canada: .05, Norway: .04, China: .04, Italy: .04};
+const W_EUBOND = {Germany: .2, France: .18, Italy: .14, Spain: .1, Netherlands: .08, 'United Kingdom': .06, Belgium: .05, 'United States of America': .05, Sweden: .03};
+const blend = (...parts) => { const o = {}; for (const [w, m] of parts) for (const [k, v] of Object.entries(m)) o[k] = (o[k] || 0) + w * v; return o };
+const EXPO = {
+  'Robo': blend([.9, W_WORLD], [.1, W_EM]), 'MSCI World': W_WORLD, 'Robeco': W_WORLD,
+  'MyI Value': W_VALUE, 'Cobas': W_VALUE, 'Neuberger': W_EUBOND, 'MSCI EM': W_EM, 'MSCI China': {China: 1},
+  'UBER': {'United States of America': 1}, 'NFLX': {'United States of America': 1}, 'BN': {Canada: .45, 'United States of America': .4, Brazil: .05, Australia: .05},
+  'IREN': {'United States of America': .7, Canada: .3}, 'LAC': {'United States of America': 1}, 'AMP': {Spain: 1}, 'NXT': {Spain: 1},
+};
+const ES_NAME = {'United States of America': 'EE. UU.', Japan: 'Japón', 'United Kingdom': 'Reino Unido', Canada: 'Canadá', France: 'Francia', Switzerland: 'Suiza', Germany: 'Alemania', Australia: 'Australia', Netherlands: 'Países Bajos', Sweden: 'Suecia', Denmark: 'Dinamarca', Italy: 'Italia', Spain: 'España', China: 'China', India: 'India', Taiwan: 'Taiwán', 'South Korea': 'Corea del Sur', Brazil: 'Brasil', 'Saudi Arabia': 'Arabia Saudí', 'South Africa': 'Sudáfrica', Mexico: 'México', Indonesia: 'Indonesia', Thailand: 'Tailandia', 'United Arab Emirates': 'Emiratos Árabes', Malaysia: 'Malasia', Norway: 'Noruega', Belgium: 'Bélgica'};
+let WORLD = null; // country shapes, loaded once from world-atlas (a public map file; no portfolio data is sent)
+async function drawGeo(all) {
+  const by = {}; let other = 0;
+  for (const p of all) {
+    const prof = EXPO[ticker(p)] || {}; let used = 0;
+    for (const [c, w] of Object.entries(prof)) { by[c] = (by[c] || 0) + p.value * w; used += w }
+    other += p.value * Math.max(0, 1 - used);
+  }
+  const total = Object.values(by).reduce((s, v) => s + v, 0) + other;
+  const top = Object.entries(by).sort((a, b) => b[1] - a[1]), shown = top.slice(0, 8), restV = top.slice(8).reduce((s, [, v]) => s + v, 0) + other;
+  // one color scale for map and list: square-root of the share, so the US (very large) doesn't wash out every other country
+  const ramp = ['#2A56BF', '#3872FF', '#5F8DFF', '#87AAFF', '#A6C0FF', '#C3D4FF', '#D6E2FF', '#E6EDFF'];
+  const maxShare = Math.max(...Object.values(by)) / total;
+  const shade = v => v <= 0 ? C.grid : ramp[Math.min(ramp.length - 1, Math.floor((1 - Math.sqrt(v / maxShare)) * ramp.length))];
+  $('lGeo').innerHTML = shown.map(([c, v]) => `<li style="--c:${shade(v / total)}"><span class="nm">${ES_NAME[c] || c}</span><span>${pct(v / total).replace(/,\d+/, '')}</span></li>`).join('')
+    + `<li style="--c:var(--line)"><span class="nm">Resto</span><span>${pct(restV / total).replace(/,\d+/, '')}</span></li>`;
+  try {
+    WORLD ||= ChartGeo.topojson.feature(await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json').then(r => r.json()), 'countries').features
+      .filter(f => f.properties.name !== 'Antarctica');
+  } catch { return } // map file unreachable: the list on the right still shows the numbers
+  chart('chGeo', {type: 'choropleth',
+    data: {labels: WORLD.map(f => f.properties.name), datasets: [{data: WORLD.map(f => ({feature: f, value: (by[f.properties.name] || 0) / total})),
+      borderColor: C.card, borderWidth: .5}]},
+    options: {maintainAspectRatio: false, animation: false, showOutline: false, showGraticule: false,
+      plugins: {legend: {display: false}, tooltip: {displayColors: false, callbacks: {
+        title: c => ES_NAME[c[0].raw.feature.properties.name] || c[0].raw.feature.properties.name,
+        label: c => c.raw.value ? `${pct(c.raw.value)} · ${eur(c.raw.value * total)}` : 'Sin exposición'}}},
+      scales: {projection: {axis: 'x', projection: 'equalEarth'},
+        // the value handed to interpolate is already normalized to [0, 1] by min/max
+        color: {axis: 'x', display: false, interpolate: v => v <= 0 ? C.grid : shade(v * maxShare), min: 0, max: maxShare}}}});
+}
+
+// ---------- compound interest calculator ----------
+const CALC_FIELDS = [
+  // [key, label, min, max, step, default]
+  ['ini', 'Capital inicial (€)', 0, 500000, 500, null],
+  ['mes', 'Aportación mensual (€)', 0, 5000, 25, 500],
+  ['ren', 'Rentabilidad anual (%)', 0, 15, .1, 6],
+  ['anos', 'Años', 1, 50, 1, 20],
+  ['sub', 'Subida anual de la aportación (%)', 0, 10, .5, 0],
+  ['inf', 'Inflación anual (%)', 0, 8, .1, 2],
+];
+let calc = {};
+try { calc = JSON.parse(localStorage.getItem('patrimonio-calculadora')) || {} } catch {}
+function calcInit(total) {
+  const d = Object.fromEntries(CALC_FIELDS.map(f => [f[0], f[5]])); d.ini = Math.round(total / 100) * 100;
+  for (const k in d) if (calc[k] == null) calc[k] = d[k];
+  $('calcForm').innerHTML = CALC_FIELDS.map(([k, l, mn, mx, st]) =>
+    `<label><span>${l}</span><input type="number" data-k="${k}" min="${mn}" step="${st}" value="${calc[k]}" aria-label="${l}"><input type="range" data-k="${k}" min="${mn}" max="${mx}" step="${st}" value="${Math.min(calc[k], mx)}" aria-hidden="true" tabindex="-1"></label>`).join('')
+    + `<button type="button" class="btn reset" id="calcReset">Usar mi patrimonio actual</button>`;
+  $('calcForm').oninput = e => {
+    const k = e.target.dataset.k; if (!k) return;
+    calc[k] = Math.max(0, +e.target.value || 0);
+    $('calcForm').querySelectorAll(`[data-k="${k}"]`).forEach(i => { if (i !== e.target) i.value = calc[k] });
+    try { localStorage.setItem('patrimonio-calculadora', JSON.stringify(calc)) } catch {}
+    drawCalc();
+  };
+  $('calcReset').onclick = () => { calc = {}; try { localStorage.removeItem('patrimonio-calculadora') } catch {}; calcInit(total) };
+  drawCalc();
+}
+function drawCalc() {
+  // monthly compounding at the equivalent monthly rate; the contribution rises once a year
+  const rm = (1 + calc.ren / 100) ** (1 / 12) - 1, yrs = Math.round(calc.anos);
+  let v = calc.ini, paid = 0, m = calc.mes;
+  const rows = [];
+  for (let y = 1; y <= yrs; y++) {
+    for (let i = 0; i < 12; i++) { v = v * (1 + rm) + m; paid += m }
+    rows.push({y, v, paid});
+    m *= 1 + calc.sub / 100;
+  }
+  const end = rows.at(-1), real = end.v / (1 + calc.inf / 100) ** yrs, gain = end.v - calc.ini - end.paid;
+  $('calcTitle').textContent = `Resultado a ${yrs} ${yrs === 1 ? 'año' : 'años'}`;
+  $('calcStats').innerHTML = [['Valor final', eur(end.v)], ['Total aportado', eur(calc.ini + end.paid)], ['Intereses generados', eur(gain)], ['En euros de hoy', eur(real)]]
+    .map(([l, v]) => `<div><span>${l}</span><b>${v}</b></div>`).join('');
+  const now = new Date().getFullYear();
+  chart('chCalc', {type: 'bar',
+    data: {labels: rows.map(r => String(now + r.y)), datasets: [
+      {label: 'Capital inicial', data: rows.map(() => calc.ini), backgroundColor: C.blue + '40', borderRadius: 2, stack: 's'},
+      {label: 'Aportaciones', data: rows.map(r => r.paid), backgroundColor: C.blue + '99', borderRadius: 2, stack: 's'},
+      {label: 'Intereses', data: rows.map(r => r.v - calc.ini - r.paid), backgroundColor: C.blue, borderRadius: 2, stack: 's'}]},
+    options: {...base(eur, {x: {stacked: true, grid: {display: false}, border: {display: false}, ticks: {maxTicksLimit: 12, maxRotation: 0}}, y: {stacked: true, border: {display: false}, ticks: {callback: v => HIDE ? '' : (v / 1000).toLocaleString('es-ES') + 'k', maxTicksLimit: 6}}}),
+      plugins: {legend: {display: true, position: 'top', align: 'end', labels: {boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: 'circle'}},
+        tooltip: {callbacks: {label: c => `${c.dataset.label}: ${eur(c.parsed.y)}`, footer: c => `Total: ${eur(rows[c[0].dataIndex].v)}`}}}}});
+}
+
 function drawDonut() {
   ring('Rep', model.mix);
 }
@@ -545,8 +678,10 @@ function render(x, tx) {
   const pp = v => strip(sign(v, pct)), ppEur = v => strip(sign(v, eur));
 
   // ===== 1 · PATRIMONIO =====
-  const pat = x.pat, last = pat.at(-1);
-  const monthRef = pat[Math.max(0, pat.length - 5)]; // 4 weeks back: always meaningful, even early in a month
+  // The Excel already has the current week's row (dated this coming Friday, holding today's total), so "4 weeks"
+  // compares today's total with the last weekly row at least 28 days old, not with the sheet's last rows.
+  const pat = x.pat, last = {d: now, v: x.total};
+  const monthRef = pat.filter(p => p.d <= now - 28 * 864e5).at(-1) || pat[0];
   const pnl = all.reduce((s, p) => s + (p.pnl || 0), 0), cost = all.reduce((s, p) => s + (p.cost || 0), 0);
   stats('statPat', [
     ['Patrimonio total', eur(x.total)],
@@ -632,12 +767,13 @@ function render(x, tx) {
   const top5 = byVal.slice(0, 5), rest = byVal.slice(5).reduce((s, p) => s + p.value, 0);
   ring('Top', top5.map(p => [p.name, p.value]), {center: false, last: rest ? [`Resto (${byVal.length - 5})`, rest] : null});
   ring('Veh', group(all, 0), {center: false});
-  ring('Zona', group(all, 1), {center: false});
+  drawGeo(all);
   const div = new Map(group(all, 2));
   div.set('EUR', (div.get('EUR') || 0) + x.cash); // cash is in euros
   ring('Div', [...div], {center: false});
 
   drawPlan(now);
+  calcInit(x.total);
 
   document.querySelectorAll('#scr-flu .flow').forEach(el => el.hidden = !tx);
   if (!tx) return;
@@ -758,6 +894,7 @@ const VIEWS = {
   rendimiento: ['scr-rend', 'Rendimiento', 'Rentabilidad, meses y caídas desde máximos'],
   posiciones: ['scr-pos', 'Posiciones', 'Peso y P&L de cada posición'],
   flujos: ['scr-flu', 'Flujos y diversificación', 'Aportaciones y reparto de la cartera'],
+  calculadora: ['scr-calc', 'Calculadora', 'Cuánto puede crecer tu patrimonio con aportaciones e interés compuesto'],
   plan: ['scr-plan', 'Plan', 'Pasos acordados de la estrategia y en qué punto está cada uno'],
 };
 function showView() {
