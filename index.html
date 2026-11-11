@@ -77,6 +77,10 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 /* screens */
 .desk{display:grid;grid-template-columns:1fr 1fr;gap:40px 24px;padding:24px 24px 48px;max-width:1440px;margin:0 auto}
 .desk.solo{grid-template-columns:1fr}
+/* the dashboard is the summary: detail panels (brokers, positions table, plan) only show in their own view */
+.desk:not(.solo) .detail{display:none}
+/* side by side on very wide screens, pair sections of equal height: Patrimonio | Flujos, Rendimiento | Posiciones */
+@media (min-width:1681px){.desk:not(.solo) #scr-flu{order:1}.desk:not(.solo) #scr-rend{order:2}.desk:not(.solo) #scr-pos{order:3}}
 .desk.solo .screen::before{display:none}
 .desk.solo .tiles{grid-auto-rows:136px}
 .screen{min-width:0}
@@ -214,7 +218,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
       <article class="panel w4 h2"><div class="pt"><h2>Evolución semanal</h2></div><div class="pb chart"><canvas id="chPat"></canvas></div></article>
       <article class="panel w4 h2"><div class="pt"><h2>Reparto por tipo</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dRep"></canvas><span id="cRep"></span></div><ul class="legend" id="lRep"></ul></div></div></article>
       <article class="panel w6 h2"><div class="pt"><h2>Patrimonio a fin de mes · * en curso</h2></div><div class="pb chart"><canvas id="chPatM"></canvas></div></article>
-      <article class="panel w6 h2"><div class="pt"><h2>Brókers</h2></div><div class="pb"><table class="tbl" id="tbBrk"></table></div></article>
+      <article class="panel w6 h2 detail"><div class="pt"><h2>Brókers</h2></div><div class="pb"><table class="tbl" id="tbBrk"></table></div></article>
     </div>
   </section>
 
@@ -231,20 +235,20 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
     <div class="tiles">
       <article class="panel w6 h4"><div class="pt"><h2>Posiciones · tamaño = peso, color = P&amp;L</h2></div><div class="pb chart"><canvas id="chMap"></canvas></div></article>
     </div>
-    <article class="panel free"><div class="pt"><h2>Detalle de posiciones</h2></div><div class="pb"><table class="tbl" id="tbPos"></table></div></article>
+    <article class="panel free detail"><div class="pt"><h2>Detalle de posiciones</h2></div><div class="pb"><table class="tbl" id="tbPos"></table></div></article>
   </section>
 
   <section class="screen" id="scr-flu" aria-label="Flujos y diversificación">
     <div class="tiles">
       <article class="panel w6 h2 flow"><div class="pt"><h2 id="tFlow">Aportaciones netas por mes</h2></div><div class="pb chart"><canvas id="chFlow"></canvas></div></article>
-      <article class="panel w3 h2"><div class="pt"><h2>Concentración · 5 mayores</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dTop"></canvas><span id="cTop"></span></div><ul class="legend logos" id="lTop"></ul></div></div></article>
+      <article class="panel w3 h2"><div class="pt"><h2>Concentración · 5 mayores</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dTop"></canvas><span id="cTop"></span></div><ul class="legend" id="lTop"></ul></div></div></article>
       <article class="panel w3 h2"><div class="pt"><h2>Tipo de vehículo</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dVeh"></canvas><span id="cVeh"></span></div><ul class="legend" id="lVeh"></ul></div></div></article>
       <article class="panel w3 h2"><div class="pt"><h2>Zona geográfica</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dZona"></canvas><span id="cZona"></span></div><ul class="legend" id="lZona"></ul></div></div></article>
       <article class="panel w3 h2"><div class="pt"><h2>Divisa · con liquidez</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dDiv"></canvas><span id="cDiv"></span></div><ul class="legend" id="lDiv"></ul></div></div></article>
     </div>
   </section>
 
-  <section class="screen" id="scr-plan" aria-label="Plan">
+  <section class="screen detail" id="scr-plan" aria-label="Plan">
     <article class="panel"><div class="pt"><h2>Plan de la estrategia · noviembre 2026</h2></div><div class="pb"><table class="tbl" id="tbPlan"></table></div></article>
   </section>
 
@@ -626,7 +630,7 @@ function render(x, tx) {
 
   // ===== 4 · FLUJOS Y DIVERSIFICACIÓN =====
   const top5 = byVal.slice(0, 5), rest = byVal.slice(5).reduce((s, p) => s + p.value, 0);
-  ring('Top', top5.map(p => [p.name, p.value]), {center: false, logos: true, last: rest ? [`Resto (${byVal.length - 5})`, rest] : null});
+  ring('Top', top5.map(p => [p.name, p.value]), {center: false, last: rest ? [`Resto (${byVal.length - 5})`, rest] : null});
   ring('Veh', group(all, 0), {center: false});
   ring('Zona', group(all, 1), {center: false});
   const div = new Map(group(all, 2));
@@ -749,7 +753,7 @@ darkMQ.addEventListener('change', () => { if (!document.documentElement.dataset.
 
 // ---------- views: the whole dashboard, or one screen on its own (#patrimonio, #rendimiento…) ----------
 const VIEWS = {
-  dashboard: [null, 'Dashboard', 'Todas las pantallas de un vistazo'],
+  dashboard: [null, 'Dashboard', 'Resumen de un vistazo · el detalle está en cada vista'],
   patrimonio: ['scr-pat', 'Patrimonio', 'Cuánto tienes, cómo ha evolucionado y cómo está repartido'],
   rendimiento: ['scr-rend', 'Rendimiento', 'Rentabilidad, meses y caídas desde máximos'],
   posiciones: ['scr-pos', 'Posiciones', 'Peso y P&L de cada posición'],
