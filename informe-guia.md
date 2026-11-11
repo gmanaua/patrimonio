@@ -15,8 +15,9 @@ No contiene datos: las cifras salen cada vez de `resumen.json`, que vive en `inf
    y el contexto de mercado (índices, bancos centrales, EUR/USD, oro, tipos). Usa Bigdata.com si está
    disponible y, si no, la búsqueda web. Cita la fuente de cada noticia con un enlace.
 4. Escribe `informe.html` en esa carpeta con la estructura de abajo.
-5. `node enviar.js informes/AAAA-MM-DD-<tipo>` para enviarlo. Si falla, deja el error en `error.txt`
-   de la carpeta y no reintentes en bucle.
+5. `node enviar.js informes/AAAA-MM-DD-<tipo>` para enviarlo. Genera también el informe en PDF
+   (`Patrimonio-AAAA-MM-DD-<tipo>.pdf`, A4) y lo adjunta al correo; si el PDF falla, el correo sale igual sin él.
+   Si falla el envío, deja el error en `error.txt` de la carpeta y no reintentes en bucle.
 
 ## Estructura del correo
 
@@ -39,6 +40,8 @@ No contiene datos: las cifras salen cada vez de `resumen.json`, que vive en `inf
 
 ## Formato
 
+- Cada sección es una fila de la tabla de 640 px (título de 18 px en su propia fila, contenido en la siguiente):
+  así el PDF mantiene cada título junto a su contenido.
 - HTML de correo: una sola columna de 640 px, estilos en línea (`style="…"`), sin JavaScript ni CSS externo.
 - Colores de la marca: azul `#3872FF`, negro `#111111`, gris `#676D7E`, fondo `#F9F9F9`, tarjetas blancas,
   verde `#4A7D5B` para subidas y rojo `#C9443A` para bajadas. Fuente: Inter, con Arial de respaldo.

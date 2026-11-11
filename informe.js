@@ -3,14 +3,13 @@
 // It serves this folder on localhost, opens the page in headless Edge, unlocks it with clave.txt (locally,
 // nothing is sent anywhere) and reads the decrypted model straight from the page, so the figures always match
 // the dashboard. The informes/ folder is git-ignored: it holds your real amounts.
-const fs = require('fs'), path = require('path'), http = require('http'), os = require('os'), {spawn} = require('child_process');
+const fs = require('fs'), path = require('path'), http = require('http');
+const {conEdge, until, sleep} = require('./navegador');
 
 const TIPO = process.argv[2] === 'mensual' ? 'mensual' : 'semanal';
 const ROOT = __dirname;
 const hoy = new Date(), iso = d => d.toISOString().slice(0, 10);
 const OUT = path.join(ROOT, 'informes', `${iso(hoy)}-${TIPO}`);
-const EDGE = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(fs.existsSync);
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ---- tiny static server for this folder (localhost only) ----
 const TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.bin': 'application/octet-stream',
@@ -26,41 +25,12 @@ function serve() {
   return new Promise(r => srv.listen(0, '127.0.0.1', () => r(srv)));
 }
 
-// ---- minimal Chrome DevTools Protocol client over Node's built-in WebSocket ----
-async function cdp(wsUrl) {
-  const ws = new WebSocket(wsUrl), pending = new Map(); let id = 0;
-  await new Promise((ok, ko) => { ws.onopen = ok; ws.onerror = ko });
-  ws.onmessage = e => {
-    const m = JSON.parse(e.data), p = pending.get(m.id); if (!p) return;
-    pending.delete(m.id); m.error ? p.ko(new Error(m.error.message)) : p.ok(m.result);
-  };
-  const send = (method, params = {}) => new Promise((ok, ko) => { pending.set(++id, {ok, ko}); ws.send(JSON.stringify({id, method, params})) });
-  const evaluate = async expression => {
-    const r = await send('Runtime.evaluate', {expression, awaitPromise: true, returnByValue: true});
-    if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text);
-    return r.result.value;
-  };
-  return {send, evaluate, close: () => ws.close()};
-}
-
-async function until(fn, what, ms = 60000) {
-  const t0 = Date.now();
-  for (;;) { try { if (await fn()) return } catch {} if (Date.now() - t0 > ms) throw new Error('Tiempo agotado esperando ' + what); await sleep(400) }
-}
-
 async function main() {
-  if (!EDGE) throw new Error('No encuentro Microsoft Edge');
   const password = fs.readFileSync(path.join(ROOT, 'clave.txt'), 'utf8').trim();
   fs.mkdirSync(OUT, {recursive: true});
   const srv = await serve(), base = `http://127.0.0.1:${srv.address().port}/index.html`;
-  const port = 9300 + Math.floor(Math.random() * 500), profile = fs.mkdtempSync(path.join(os.tmpdir(), 'patrimonio-edge-'));
-  const edge = spawn(EDGE, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, '--no-first-run', '--hide-scrollbars', '--window-size=1200,900', 'about:blank'], {stdio: 'ignore'});
-  let page;
   try {
-    let target;
-    await until(async () => (target = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find(t => t.type === 'page')), 'Edge');
-    page = await cdp(target.webSocketDebuggerUrl);
-    await page.send('Page.enable');
+    await conEdge(async page => {
     await page.send('Emulation.setDeviceMetricsOverride', {width: 1200, height: 900, deviceScaleFactor: 1.5, mobile: false});
     await page.send('Page.navigate', {url: base});
     await until(() => page.evaluate('document.readyState === "complete"'), 'la página');
@@ -118,9 +88,9 @@ async function main() {
     }
     fs.writeFileSync(path.join(OUT, 'resumen.json'), JSON.stringify({tipo: TIPO, imagenes, ...resumen}, null, 2));
     console.log(OUT);
+    });
   } finally {
-    page?.close(); edge.kill(); srv.close();
-    await sleep(500); try { fs.rmSync(profile, {recursive: true, force: true}) } catch {}
+    srv.close();
   }
 }
 
