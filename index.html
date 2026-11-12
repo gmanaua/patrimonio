@@ -109,6 +109,8 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .pt .tabs{margin-left:auto;display:flex;gap:2px;background:var(--bg);border-radius:8px;padding:2px}
 .pt .tabs button{border:0;background:none;color:var(--muted);padding:2px 9px;font-size:12px;font-weight:500;border-radius:6px;cursor:pointer}
 .pt .tabs button[aria-pressed=true]{background:var(--card);color:var(--blue);box-shadow:0 1px 2px rgba(17,17,17,.08)}
+.pt .filters{margin-left:auto;display:flex;gap:6px}
+.pt .filters select{font:inherit;font-size:12px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:3px 6px;max-width:150px;cursor:pointer}
 .pb{flex:1;min-height:0;overflow:hidden;padding:6px 16px 14px;position:relative}
 .pb.chart{padding:2px 12px 8px}
 
@@ -259,7 +261,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
     <div class="tiles">
       <article class="panel w6 h4"><div class="pt"><h2>Posiciones · tamaño = peso, color = P&amp;L</h2></div><div class="pb chart"><canvas id="chMap"></canvas></div></article>
     </div>
-    <article class="panel free detail"><div class="pt"><h2>Detalle de posiciones</h2></div><div class="pb"><table class="tbl" id="tbPos"></table></div></article>
+    <article class="panel free detail"><div class="pt"><h2>Detalle de posiciones</h2><div class="filters"><select id="fTipo" aria-label="Filtrar por tipo de activo"></select><select id="fBroker" aria-label="Filtrar por bróker"></select></div></div><div class="pb"><table class="tbl" id="tbPos"></table></div></article>
   </section>
 
   <section class="screen" id="scr-flu" aria-label="Flujos y diversificación">
@@ -447,6 +449,7 @@ const CLASIF = {
   'lithium americas corp': ['Acción', 'Norteamérica', 'USD', 'LAC', 'IBKR'],
   'brookfield corp': ['Acción', 'Norteamérica', 'USD', 'BN', 'IBKR'],
   'netflix inc': ['Acción', 'Norteamérica', 'USD', 'NFLX', 'IBKR'],
+  'nvidia corp': ['Acción', 'Norteamérica', 'USD', 'NVDA', 'IBKR'],
   'amper sa': ['Acción', 'España', 'EUR', 'AMP', 'Trade Republic'],
   'nueva expresion textil sa': ['Acción', 'España', 'EUR', 'NXT', 'IBKR'],
 };
@@ -456,7 +459,7 @@ const CLASIF = {
 const LOGOS = {
   'Robo': 'myinvestor.png', 'MyI Value': 'myinvestor.png', 'MSCI World': 'fidelity.png', 'Cobas': 'cobas.png',
   'Neuberger': 'neuberger.png', 'Robeco': 'robeco.png', 'MSCI EM': 'ishares.png', 'MSCI China': 'ishares.png',
-  'IREN': 'iren.svg', 'UBER': 'uber.png', 'LAC': 'lithiumamericas.ico', 'BN': 'brookfield.png', 'NFLX': 'netflix.png',
+  'IREN': 'iren.svg', 'UBER': 'uber.png', 'LAC': 'lithiumamericas.ico', 'BN': 'brookfield.png', 'NFLX': 'netflix.png', 'NVDA': 'nvidia.png',
   'AMP': 'amper.png', 'NXT': 'nextil.jpg',
   'Trade Republic': 'traderepublic.png', 'MyInvestor': 'myinvestor.png', 'IBKR': 'ibkr.png',
 };
@@ -527,10 +530,24 @@ const POS_COLS = [
 ];
 let posSort = {key: 'value', dir: -1}, posRows = [];
 try { const s = JSON.parse(localStorage.getItem('patrimonio-orden')); if (POS_COLS.some(c => c[0] === s?.key)) posSort = s } catch {}
+// filters: asset type (CLASIF index 0) and broker (index 4); '' = all. Options come from the positions held. Remembered.
+let posFilter = {tipo: '', broker: ''};
+try { posFilter = {...posFilter, ...JSON.parse(localStorage.getItem('patrimonio-filtro'))} } catch {}
+function fillFilter(id, key, i, all) {
+  const vals = [...new Set(posRows.map(p => clasif(p, i)))].sort((a, b) => a.localeCompare(b, 'es'));
+  if (!vals.includes(posFilter[key])) posFilter[key] = '';
+  $(id).innerHTML = `<option value="">${all}</option>` + vals.map(v => `<option${v === posFilter[key] ? ' selected' : ''}>${v}</option>`).join('');
+  $(id).onchange = e => {
+    posFilter[key] = e.target.value;
+    try { localStorage.setItem('patrimonio-filtro', JSON.stringify(posFilter)) } catch {}
+    drawPosTable();
+  };
+}
 function drawPosTable(rows) {
-  if (rows) posRows = rows;
+  if (rows) { posRows = rows; fillFilter('fTipo', 'tipo', 0, 'Todos los tipos'); fillFilter('fBroker', 'broker', 4, 'Todos los brókers') }
   const col = POS_COLS.find(c => c[0] === posSort.key), get = col[3], text = col[4];
-  const sorted = [...posRows].sort((a, b) =>
+  const shown = posRows.filter(p => (!posFilter.tipo || clasif(p, 0) === posFilter.tipo) && (!posFilter.broker || clasif(p, 4) === posFilter.broker));
+  const sorted = shown.sort((a, b) =>
     (text ? String(get(a)).localeCompare(String(get(b)), 'es', {sensitivity: 'base'}) : (get(a) ?? -Infinity) - (get(b) ?? -Infinity)) * posSort.dir
     || b.value - a.value);
   const cap = s => s.charAt(0) + s.slice(1).toLowerCase(), pp = v => strip(sign(v, pct)), ppEur = v => strip(sign(v, eur));
@@ -542,7 +559,8 @@ function drawPosTable(rows) {
       <td class="hm">${clasif(p, 4)}</td><td class="hm">${clasif(p, 0)}</td>
       <td class="r">${pct(p.weight).replace(/,\d+/, '')}</td><td class="r v">${eur(p.value)}</td>
       <td class="r hm ${cls(p.pnl)}">${ppEur(p.pnl)}</td>
-      <td class="r"><span class="pill ${p.ret >= 0 ? 'ok' : 'ko'}">${pp(p.ret)}</span></td></tr>`).join('');
+      <td class="r"><span class="pill ${p.ret >= 0 ? 'ok' : 'ko'}">${pp(p.ret)}</span></td></tr>`).join('')
+    + (sorted.length ? '' : `<tr><td colspan="${POS_COLS.length}" class="dim">Ninguna posición con estos filtros</td></tr>`);
 }
 // one listener on the table: text columns start A→Z, numbers start largest first
 $('tbPos').onclick = e => {
@@ -566,7 +584,7 @@ const blend = (...parts) => { const o = {}; for (const [w, m] of parts) for (con
 const EXPO = {
   'Robo': blend([.9, W_WORLD], [.1, W_EM]), 'MSCI World': W_WORLD, 'Robeco': W_WORLD,
   'MyI Value': W_VALUE, 'Cobas': W_VALUE, 'Neuberger': W_EUBOND, 'MSCI EM': W_EM, 'MSCI China': {China: 1},
-  'UBER': {'United States of America': 1}, 'NFLX': {'United States of America': 1}, 'BN': {Canada: .45, 'United States of America': .4, Brazil: .05, Australia: .05},
+  'UBER': {'United States of America': 1}, 'NVDA': {'United States of America': 1}, 'NFLX': {'United States of America': 1}, 'BN': {Canada: .45, 'United States of America': .4, Brazil: .05, Australia: .05},
   'IREN': {'United States of America': .7, Canada: .3}, 'LAC': {'United States of America': 1}, 'AMP': {Spain: 1}, 'NXT': {Spain: 1},
 };
 const ES_NAME = {'United States of America': 'EE. UU.', Japan: 'Japón', 'United Kingdom': 'Reino Unido', Canada: 'Canadá', France: 'Francia', Switzerland: 'Suiza', Germany: 'Alemania', Australia: 'Australia', Netherlands: 'Países Bajos', Sweden: 'Suecia', Denmark: 'Dinamarca', Italy: 'Italia', Spain: 'España', China: 'China', India: 'India', Taiwan: 'Taiwán', 'South Korea': 'Corea del Sur', Brazil: 'Brasil', 'Saudi Arabia': 'Arabia Saudí', 'South Africa': 'Sudáfrica', Mexico: 'México', Indonesia: 'Indonesia', Thailand: 'Tailandia', 'United Arab Emirates': 'Emiratos Árabes', Malaysia: 'Malasia', Norway: 'Noruega', Belgium: 'Bélgica'};
