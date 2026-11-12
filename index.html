@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Patrimonio Terminal</title>
+<title>Manau's Global Investment Hedge Fund</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -50,7 +50,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 
 /* top band: brand, data status and actions */
 .top{position:sticky;top:0;z-index:6;height:56px;background:var(--blue);color:var(--on-blue);display:flex;align-items:center;gap:12px;padding:0 24px}
-.top .brand{font:700 18px/1 "Inter Tight",Inter,sans-serif;margin-right:auto}
+.top .brand{font:700 18px/1.2 "Inter Tight",Inter,sans-serif;margin-right:auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .grow{flex:1;opacity:.8;font-size:12px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .btn{background:transparent;border-color:rgba(255,255,255,.45);color:var(--on-blue);padding:4px 12px;white-space:nowrap}
 .top .btn:hover{background:rgba(255,255,255,.14);border-color:#fff;color:var(--on-blue)}
@@ -216,7 +216,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 </head>
 <body>
 <header class="top">
-  <span class="brand">Patrimonio</span>
+  <span class="brand" title="Manau's Global Investment Hedge Fund">Manau's Global Investment Hedge Fund</span>
   <span class="grow" id="status">Cargando…</span>
   <button class="btn icon" id="themeBtn" type="button"></button>
   <button class="btn" id="hideMoney" type="button" aria-pressed="false" title="Ocultar o mostrar las cifras en euros">Ocultar €</button>
@@ -931,7 +931,7 @@ function showView() {
   $('app').classList.toggle('solo', !!only);
   $('viewTitle').textContent = title; $('viewSub').textContent = sub;
   document.querySelectorAll('.side a').forEach(a => a.dataset.view === key ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
-  document.title = `${title} · Patrimonio`;
+  document.title = `${title} · Manau's Global Investment Hedge Fund`;
   scrollTo(0, 0);
 }
 addEventListener('hashchange', showView);
