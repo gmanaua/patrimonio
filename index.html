@@ -80,8 +80,6 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .desk.solo{grid-template-columns:1fr}
 /* the dashboard is the summary: detail panels (brokers, positions table, plan) only show in their own view */
 .desk:not(.solo) .detail{display:none}
-/* side by side on very wide screens, pair sections of equal height: Patrimonio | Flujos, Rendimiento | Posiciones */
-@media (min-width:1681px){.desk:not(.solo) #scr-flu{order:1}.desk:not(.solo) #scr-rend{order:2}.desk:not(.solo) #scr-pos{order:3}}
 .desk.solo .screen::before{display:none}
 .desk.solo .tiles{grid-auto-rows:136px}
 .screen{min-width:0}
@@ -99,6 +97,16 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .desk.solo #scr-rend .tiles > .w2{grid-row:3 / span 4}
 .desk:not(.solo) #scr-rend .stat b{font-size:20px}
 @media (max-width:640px){#scr-rend .tiles{grid-template-columns:minmax(0,1fr)}#scr-rend .tiles > .w2,.desk.solo #scr-rend .tiles > .w2{grid-column:1;grid-row:span 4}}
+/* side by side on very wide screens: Patrimonio | Rendimiento first, then Flujos | Posiciones. Rendimiento and the
+   positions map stretch to 7 rows so each pair ends level (Patrimonio and Flujos are 7 rows tall) */
+@media (min-width:1681px){
+  .desk:not(.solo) #scr-rend{order:1}.desk:not(.solo) #scr-flu{order:2}.desk:not(.solo) #scr-pos{order:3}
+  .desk:not(.solo) #scr-rend .tiles > .w4:first-child{grid-row:span 3}
+  .desk:not(.solo) #scr-rend .h1{grid-row:span 2}
+  .desk:not(.solo) #scr-rend .tiles > .w2{grid-row:4 / span 4}
+  .desk:not(.solo) #scr-rend .stat b{font-size:30px}
+  .desk:not(.solo) #scr-pos .h4{grid-row:span 7}
+}
 @media (max-width:1680px){.desk{grid-template-columns:1fr}}
 @media (max-width:860px){
   .top{padding:0 16px;gap:8px}.top .grow{display:none}
@@ -276,11 +284,11 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 
   <section class="screen" id="scr-flu" aria-label="Flujos y diversificación">
     <div class="tiles">
-      <article class="panel w6 h2 flow"><div class="pt"><h2 id="tFlow">Aportaciones netas por mes</h2></div><div class="pb chart"><canvas id="chFlow"></canvas></div></article>
       <article class="panel w6 h3"><div class="pt"><h2>Exposición por país · aproximada</h2></div><div class="pb"><div class="geo"><div class="map"><canvas id="chGeo"></canvas></div><ul class="legend" id="lGeo"></ul></div></div></article>
       <article class="panel w2 h2"><div class="pt"><h2>Concentración · 5 mayores</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dTop"></canvas><span id="cTop"></span></div><ul class="legend" id="lTop"></ul></div></div></article>
       <article class="panel w2 h2"><div class="pt"><h2>Tipo de vehículo</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dVeh"></canvas><span id="cVeh"></span></div><ul class="legend" id="lVeh"></ul></div></div></article>
       <article class="panel w2 h2"><div class="pt"><h2>Divisa · con liquidez</h2></div><div class="pb"><div class="donut"><div class="ring"><canvas id="dDiv"></canvas><span id="cDiv"></span></div><ul class="legend" id="lDiv"></ul></div></div></article>
+      <article class="panel w6 h2 flow"><div class="pt"><h2 id="tFlow">Aportaciones netas por mes</h2></div><div class="pb chart"><canvas id="chFlow"></canvas></div></article>
     </div>
   </section>
 
