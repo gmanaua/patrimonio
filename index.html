@@ -360,15 +360,19 @@ function holdings(tx) {
 
 // Excel stock data-type cells read as #VALUE!: recover the name by matching a quantity in the row that holds the same market value.
 function stockName(rows, vm, held) {
+  // closest match wins: a fund's unit count can sit within 1.5% of a stock's average price
+  let best = null, bestErr = 0.015;
   for (const r of rows) {
     if (!r.includes(vm)) continue;
     for (const v of r) {
       if (!isNum(v) || v === vm) continue;
-      const m = held.find(([, q]) => Math.abs(v - q) / q < 0.015);
-      if (m) return m[0];
+      for (const [name, q] of held) {
+        const err = Math.abs(v - q) / q;
+        if (err < bestErr) { best = name; bestErr = err }
+      }
     }
   }
-  return null;
+  return best;
 }
 
 function parseExcel(wb, held) {
