@@ -856,9 +856,51 @@ async function withHistory(weekly) {
   return all.map((p, i) => ({...p, g: g *= 1 + (i ? p.r : 0)}));
 }
 
+// Daily closes written by precios.js (GitHub Action, public prices only) on the "precios" branch.
+// value = units from the encrypted PP CSV × latest close, so the dashboard is current without opening the Excel.
+const PRECIOS_URL = 'https://raw.githubusercontent.com/gmanaua/patrimonio/precios/precios.json';
+// position (as named in the dashboard) -> [[PP asset, price key in precios.json]]; the Roboadvisor is the sum of its funds
+const LEGS = {
+  'neuberger berman short duration euro bond fund': [['Neuberger Berman Short Duration Euro Bond FunD', 'IE00BFZMJT78']],
+  'fidelity msci world': [['Fidelity MSCI World Index Fund EUR', 'IE00BYX5NX33']],
+  'myinvestor value': [['MyInvestor Value', 'ES0165243025']],
+  'cobas international': [['Cobas International Fund-P Acc EUR', 'LU1598719752']],
+  'roboadvisor': [['iShares US Equity Index Fund clase S', 'IE000N4ZYX28'], ['iShares Developed World ESG Screened Index Fund (IE) D Acc EUR', 'IE000N51F726'],
+    ['iShares Emerging Markets Index Fund (IE) S Acc EUR', 'IE000QAZP7L2'], ['Fidelity MSCI Japan Index Fund P-ACC-EUR', 'IE00BYX5N771'],
+    ['Fidelity MSCI Europe Index Fund P-ACC-EUR', 'IE00BYX5MD61'], ['Vanguard US Equity Index Fund EUR Hedged', 'IE00B1G3DH73'],
+    ['Fidelity MSCI Pacific ex Japan', 'IE00BDZVHT63']],
+  'msci em': [['ISHARES MSCI EM ACC', 'EUNM.DE']], 'msci china': [['ISHARES MSCI CHINA USD ACC', 'ICGA.DE']],
+  'nvidia corp': [['NVIDIA CORP', 'NVDA']], 'iren ltd': [['IREN LTD', 'IREN']], 'uber technologies inc': [['UBER TECHNOLOGIES INC', 'UBER']],
+  'lithium americas corp': [['LITHIUM AMERICAS CORP', 'LAC']], 'brookfield corp': [['BROOKFIELD CORP', 'BN']],
+  'netflix inc': [['NETFLIX INC', 'NFLX']], 'nueva expresion textil sa': [['NUEVA EXPRESION TEXTIL SA', 'NXT.MC']],
+};
+
+async function withPrices(x, tx) {
+  const P = await fetch(PRECIOS_URL + '?t=' + Date.now(), {cache: 'no-store'}).then(r => r.ok ? r.json() : null).catch(() => null);
+  if (!P || !tx) return;
+  const qty = Object.fromEntries(holdings(tx));
+  const eurOf = k => { const p = P.precios[k]; return p ? (p.moneda === 'USD' ? p.precio / P.eurusd : p.precio) : NaN };
+  for (const b of x.blocks) for (const p of b.pos) {
+    const legs = LEGS[p.name.toLowerCase().trim()];
+    if (!legs) continue;
+    const v = legs.reduce((s, [a, k]) => s + (qty[a] || 0) * eurOf(k), 0);
+    // missing price, or PP units out of step with the Excel (e.g. a purchase not exported yet): keep the Excel value
+    if (!(Math.abs(v / p.value - 1) < 0.25)) { console.warn('precio sin aplicar:', p.name, v, p.value); continue }
+    const d = v - p.value, broker = x.brokers.find(r => r[0] === clasif(p, 4)), mix = x.mix.find(r => r[0] === (clasif(p, 0) === 'Renta fija' ? 'R. FIJA' : 'R. VAR'));
+    p.value = v; p.pnl = v - p.cost; p.ret = p.pnl / p.cost;
+    b.value += d; x.total += d; x.invested += d;
+    if (broker) broker[1] += d;
+    if (mix) mix[1] += d;
+    const f = legs.map(([, k]) => P.precios[k]?.fecha).sort()[0];
+    if (!x.precios || f > x.precios) x.precios = f;
+  }
+  for (const b of x.blocks) { b.weight = b.value / x.invested; for (const p of b.pos) p.weight = p.value / x.invested }
+}
+
 async function loadData(xlsxBuf, csvText) {
   const tx = csvText ? parseTx(csvText) : null;
   const x = parseExcel(XLSX.read(xlsxBuf, {type: 'array'}), tx ? holdings(tx) : []);
+  await withPrices(x, tx);
   x.weekly = await withHistory(x.weekly);
   // show the app first: panels need their real size to fit their content
   $('empty').hidden = true; $('app').hidden = false; $('head').hidden = false;
@@ -899,7 +941,8 @@ async function refresh() {
     await loadData(xl, csv);
     stamp = st.actualizado;
     $('lock').hidden = true;
-    $('status').textContent = `Datos de ${new Date(st.actualizado).toLocaleString('es-ES', {dateStyle: 'short', timeStyle: 'short'})}`;
+    $('status').textContent = `Datos de ${new Date(st.actualizado).toLocaleString('es-ES', {dateStyle: 'short', timeStyle: 'short'})}`
+      + (model.precios ? ` · precios al cierre del ${new Date(model.precios).toLocaleDateString('es-ES', {day: 'numeric', month: 'short'})}` : '');
   } catch (e) {
     // offline or Pages still deploying: keep the last view and retry on the next tick
     $('status').textContent = 'Error: ' + e.message;
