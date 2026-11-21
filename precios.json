@@ -1,0 +1,106 @@
+{
+ "actualizado": "2026-11-21T02:43:07.626Z",
+ "eurusd": 1.097,
+ "precios": {
+  "IE00BFZMJT78": {
+   "precio": 118.16,
+   "moneda": "EUR",
+   "fecha": "2026-11-19"
+  },
+  "IE00BYX5NX33": {
+   "precio": 13.95,
+   "moneda": "EUR",
+   "fecha": "2026-11-19"
+  },
+  "ES0165243025": {
+   "precio": 1.29,
+   "moneda": "EUR",
+   "fecha": "2026-11-19"
+  },
+  "LU1598719752": {
+   "precio": 175.04,
+   "moneda": "EUR",
+   "fecha": "2026-11-19"
+  },
+  "IE000N4ZYX28": {
+   "precio": 12,
+   "moneda": "EUR",
+   "fecha": "2026-11-19"
+  },
+  "IE000N51F726": {
+   "precio": 11.93,
+   "moneda": "EUR",
+   "fecha": "2026-11-19"
+  },
+  "IE000QAZP7L2": {
+   "precio": 12.59,
+   "moneda": "EUR",
+   "fecha": "2026-11-19"
+  },
+  "IE00BYX5N771": {
+   "precio": 10.1,
+   "moneda": "EUR",
+   "fecha": "2026-11-19"
+  },
+  "IE00BYX5MD61": {
+   "precio": 10.76,
+   "moneda": "EUR",
+   "fecha": "2026-11-19"
+  },
+  "IE00B1G3DH73": {
+   "precio": 49.05,
+   "moneda": "EUR",
+   "fecha": "2026-11-19"
+  },
+  "IE00BDZVHT63": {
+   "precio": 7.98,
+   "moneda": "USD",
+   "fecha": "2026-11-19"
+  },
+  "EUNM.DE": {
+   "precio": 50.622,
+   "moneda": "EUR",
+   "fecha": "2026-11-19"
+  },
+  "ICGA.DE": {
+   "precio": 4.4355,
+   "moneda": "EUR",
+   "fecha": "2026-11-19"
+  },
+  "NVDA": {
+   "precio": 125.53,
+   "moneda": "USD",
+   "fecha": "2026-11-20"
+  },
+  "IREN": {
+   "precio": 11.82,
+   "moneda": "USD",
+   "fecha": "2026-11-20"
+  },
+  "UBER": {
+   "precio": 63.47,
+   "moneda": "USD",
+   "fecha": "2026-11-20"
+  },
+  "LAC": {
+   "precio": 1.27,
+   "moneda": "USD",
+   "fecha": "2026-11-20"
+  },
+  "BN": {
+   "precio": 37.75,
+   "moneda": "USD",
+   "fecha": "2026-11-20"
+  },
+  "NFLX": {
+   "precio": 56.73,
+   "moneda": "USD",
+   "fecha": "2026-11-20"
+  },
+  "NXT.MC": {
+   "precio": 0.881,
+   "moneda": "EUR",
+   "fecha": "2026-11-19"
+  }
+ }
+}
