@@ -92,18 +92,20 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 #scr-rend .tiles{grid-template-columns:minmax(0,1fr) 230px}
 #scr-rend .tiles > .w4{grid-column:1}
 #scr-rend .tiles > .w4:first-child{grid-column:1 / -1}
-#scr-rend .tiles > .w2{grid-column:2;grid-row:3 / span 2}
+#scr-rend .tiles > .w2{grid-column:2;grid-row:4 / span 2}
 .desk.solo #scr-rend .h1{grid-row:span 2}
-.desk.solo #scr-rend .tiles > .w2{grid-row:3 / span 4}
+.desk.solo #scr-rend .tiles > .w4:first-child{grid-row:span 4}
+.desk.solo #scr-rend .tiles > .w2{grid-row:5 / span 4}
 .desk:not(.solo) #scr-rend .stat b{font-size:20px}
 @media (max-width:640px){#scr-rend .tiles{grid-template-columns:minmax(0,1fr)}#scr-rend .tiles > .w2,.desk.solo #scr-rend .tiles > .w2{grid-column:1;grid-row:span 4}}
 /* side by side on very wide screens: Patrimonio | Rendimiento first, then Flujos | Posiciones. Rendimiento and the
-   positions map stretch to 7 rows so each pair ends level (Patrimonio and Flujos are 7 rows tall) */
+   positions map stretch so each pair ends level (Patrimonio | Rendimiento 8 rows, Flujos | Posiciones 7) */
 @media (min-width:1681px){
   .desk:not(.solo) #scr-rend{order:1}.desk:not(.solo) #scr-flu{order:2}.desk:not(.solo) #scr-pos{order:3}
-  .desk:not(.solo) #scr-rend .tiles > .w4:first-child{grid-row:span 3}
+  .desk:not(.solo) #scr-pat .h3{grid-row:span 4}
+  .desk:not(.solo) #scr-rend .tiles > .w4:first-child{grid-row:span 4}
   .desk:not(.solo) #scr-rend .h1{grid-row:span 2}
-  .desk:not(.solo) #scr-rend .tiles > .w2{grid-row:4 / span 4}
+  .desk:not(.solo) #scr-rend .tiles > .w2{grid-row:5 / span 4}
   .desk:not(.solo) #scr-rend .stat b{font-size:30px}
   .desk:not(.solo) #scr-pos .h4{grid-row:span 7}
 }
@@ -275,7 +277,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 
   <section class="screen" id="scr-rend" aria-label="Rendimiento">
     <div class="tiles">
-      <article class="panel w4 h2"><div class="pt"><h2 id="tTr">Rentabilidad acumulada</h2><div class="tabs" id="periods" role="group" aria-label="Periodo"></div></div><div class="pb chart"><canvas id="chTr"></canvas></div></article>
+      <article class="panel w4 h3"><div class="pt"><h2 id="tTr">Rentabilidad acumulada</h2><div class="tabs" id="periods" role="group" aria-label="Periodo"></div></div><div class="pb chart"><canvas id="chTr"></canvas></div></article>
       <article class="panel w2 h4"><div class="pt"><h2>Rendimiento</h2></div><div class="pb"><div class="stats" id="statRend"></div></div></article>
       <article class="panel w4 h1"><div class="pt"><h2>Por mes · * en curso</h2></div><div class="pb chart"><canvas id="chMonth"></canvas></div></article>
       <article class="panel w4 h1"><div class="pt"><h2>Caída desde máximos</h2></div><div class="pb chart"><canvas id="chDD"></canvas></div></article>
@@ -729,9 +731,14 @@ function render(x, tx) {
   // compares today's total with the last weekly row at least 28 days old, not with the sheet's last rows.
   const pat = x.pat, last = {d: now, v: x.total};
   const monthRef = pat.filter(p => p.d <= now - 28 * 864e5).at(-1) || pat[0];
+  // "last week" = this week's Friday row against the one before it: the current week ends this Friday (Mon–Fri)
+  // or ended last Friday (weekend), so the reference is the last row at least a week before that Friday
+  const dow = now.getDay(), fri = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (dow === 0 ? -2 : dow === 6 ? -1 : 5 - dow));
+  const weekRef = pat.filter(p => p.d <= fri - 6.5 * 864e5).at(-1) || pat[0];
   const pnl = all.reduce((s, p) => s + (p.pnl || 0), 0), cost = all.reduce((s, p) => s + (p.cost || 0), 0);
   stats('statPat', [
     ['Patrimonio total', eur(x.total)],
+    ['Última semana', `<span class="${cls(last.v - weekRef.v)}">${ppEur(last.v - weekRef.v)}</span>`, `<span class="${cls(last.v - weekRef.v)}">${pp(last.v / weekRef.v - 1)}</span> <span class="dim">desde el ${dstr(weekRef.d)}</span>`],
     ['Últimas 4 semanas', `<span class="${cls(last.v - monthRef.v)}">${ppEur(last.v - monthRef.v)}</span>`, `<span class="${cls(last.v - monthRef.v)}">${pp(last.v / monthRef.v - 1)}</span> <span class="dim">incluye aportaciones</span>`],
     ['P&L latente', `<span class="${cls(pnl)}">${ppEur(pnl)}</span>`, `<span class="${cls(pnl)}">${pp(pnl / cost)}</span> <span class="dim">sobre lo invertido</span>`],
   ]);
